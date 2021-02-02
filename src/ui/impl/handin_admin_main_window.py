@@ -28,6 +28,6 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "Handin System (Lecturer)"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "Handin System (Administrator)"))
         self.pushButton.setText(_translate("MainWindow", "Create New Module"))
 
