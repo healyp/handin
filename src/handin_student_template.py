@@ -13,7 +13,6 @@ PORT = "{}"
 STUDENT_NAME = "{}"
 STUDENT_ID = "{}"
 MODULE_CODE = "{}"
-MODULE_NAME = "{}"
 # ****** DYNAMIC CONFIGS ****** #
 
 

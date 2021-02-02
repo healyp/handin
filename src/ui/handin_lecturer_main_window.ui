@@ -62,7 +62,20 @@
      </rect>
     </property>
     <property name="text">
-     <string>Create Weekly Assignment</string>
+     <string>Create One-Off Assignment</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_4">
+    <property name="geometry">
+     <rect>
+      <x>140</x>
+      <y>220</y>
+      <width>200</width>
+      <height>30</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Create Repeating Assignment</string>
     </property>
    </widget>
   </widget>
