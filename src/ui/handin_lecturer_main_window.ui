@@ -36,7 +36,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>Create New Module</string>
+     <string>Manage Student Marks</string>
     </property>
    </widget>
    <widget class="QPushButton" name="pushButton_2">
@@ -49,7 +49,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>Manage Student Marks</string>
+     <string>Create One-Off Assignment</string>
     </property>
    </widget>
    <widget class="QPushButton" name="pushButton_3">
@@ -62,7 +62,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>Create Weekly Assignment</string>
+     <string>Create Repeating Assignment</string>
     </property>
    </widget>
   </widget>
