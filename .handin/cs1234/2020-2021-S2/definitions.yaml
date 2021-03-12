@@ -1,0 +1,5 @@
+academicYear: 2020-2021-S2
+defCutoffDate: Friday, %w+1
+defDueDate: Monday, %w
+defOpenDate: Monday, %w-1
+defWeek01: '2021-02-22'

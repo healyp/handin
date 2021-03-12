@@ -131,7 +131,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Penalty per day:</string>
+    <string>Penalty per day (%):</string>
    </property>
   </widget>
   <widget class="QDateTimeEdit" name="dateTimeEdit_endDay">
@@ -154,7 +154,7 @@
     </rect>
    </property>
   </widget>
-  <widget class="QLineEdit" name="lineEdit_penaltyPerDay">
+  <widget class="QSpinBox" name="spinBox_penaltyPerDay">
    <property name="geometry">
     <rect>
      <x>550</x>
@@ -207,7 +207,7 @@
     <string>Total Attempts:</string>
    </property>
   </widget>
-  <widget class="QLineEdit" name="lineEdit_totalAttempts">
+  <widget class="QSpinBox" name="spinBox_totalAttempts">
    <property name="geometry">
     <rect>
      <x>170</x>

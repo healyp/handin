@@ -12,11 +12,13 @@ from ui.impl.createOneOffAssignment_dialog import Ui_Dialog as Ui_Dialog_CreateO
 from ui.impl.create_repeat_assignments_dialog import Ui_Dialog as Ui_Dialog_Create_Repeat_Assignments
 from ui.impl.handin_lecturer_main_window import Ui_MainWindow as Ui_MainWindow
 from ui.impl.manage_student_marks_dialog import Ui_Dialog as Ui_Dialog_Manage_Student_Marks
+from ui.impl.create_definitions_dialog import Ui_Dialog as Ui_Dialog_Create_Definitions
 
 # from dateutil.parser import parse
 from datetime import date
 
-from const import ROOTDIR, ModCodeRE, findStudentId
+import const
+from const import ROOTDIR, ModCodeRE, findStudentId, whatAY, containsValidDay, check_if_module_exists
 
 
 def create_message_box(text):
@@ -26,12 +28,6 @@ def create_message_box(text):
     msgBox.setWindowTitle("Message")
     msgBox.setStandardButtons(QMessageBox.Ok)
     msgBox.exec()
-
-
-def get_module_codes() -> list:
-    path = DIR_ROOT + "/module/"
-    return [name for name in os.listdir(path)]
-
 
 def getModuleCodes() -> list:
     return [name for name in os.listdir(ROOTDIR) if re.match(ModCodeRE, name)]
@@ -51,6 +47,14 @@ def get_all_student_ids(module_code) -> list:
     content = [x.strip() for x in content]
     return content
 
+def isMatchRegex(regex: str, text: str) -> bool:
+    return bool(re.match(regex, text, re.IGNORECASE))
+
+def validDefaultDate(given: str):
+    if containsValidDay(given) and re.search("%w(\s*[+-]\s*\d+)?", given, re.IGNORECASE):
+        return(True)
+    else:
+        return(False)
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
@@ -59,6 +63,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton.clicked.connect(lambda: self.manage_student_marks())
         self.pushButton_2.clicked.connect(lambda: self.createOneOffAssignment())
         self.pushButton_3.clicked.connect(lambda: self.create_repeat_assignments())
+        self.pushButton_4.clicked.connect(lambda: self.create_definitions())
+
 
     def manage_student_marks(self):
         dialog = ManageStudentMarksDialog(self)
@@ -72,12 +78,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         dialog = CreateRepeatAssignmentsDialog(self)
         dialog.show()
 
+    def create_definitions(self):
+        dialog = CreateDefinitionsDialog(self)
+        dialog.show()
+
 
 class ManageStudentMarksDialog(QDialog, Ui_Dialog_Manage_Student_Marks):
     def __init__(self, parent=None):
         super(ManageStudentMarksDialog, self).__init__(parent)
         self.setupUi(self)
-        self.comboBox_moduleCode.addItems(get_module_codes())
+        self.comboBox_moduleCode.addItems(getModuleCodes())
         self.comboBox_week.addItems(["w01", "w02", "w03", "w04", "w05", "w06", "w07",
                                     "w08", "w09", "w10", "w11", "w12", "w13"])
         self.comboBox_week.currentTextChanged.connect(self.update_table)
@@ -580,6 +590,73 @@ class CreateRepeatAssignmentsDialog(QDialog, Ui_Dialog_Create_Repeat_Assignments
         with open(self.params_path, 'a') as file:
             # TODO: any more params to add??
             yaml.dump(kwargs, file, default_flow_style=False)
+
+class CreateDefinitionsDialog(QDialog, Ui_Dialog_Create_Definitions):
+    def __init__(self, parent=None):
+        super(CreateDefinitionsDialog, self).__init__(parent)
+        self.setupUi(self)
+        self.dateEdit_startSemester.setDisplayFormat("yyyy-MM-dd")
+        self.dateEdit_startSemester.setDate(QDate.currentDate())
+        # Academic Year format: 2020-2021-S1
+        self.regexAY = "\\d{4}-\\d{4}-S[1,2]"
+        # self.lineEdit_academicYear.setPlaceholderText(whatAY())
+        self.lineEdit_academicYear.setText(whatAY())
+        self.accepted.connect(lambda: self.create_definitions())
+        self.buttonBox.setEnabled(False)
+        self.lineEdit.textChanged.connect(self.disable_buttonbox)
+        self.lineEdit_2.textChanged.connect(self.disable_buttonbox)
+        self.lineEdit_3.textChanged.connect(self.disable_buttonbox)
+        self.lineEdit_4.textChanged.connect(self.disable_buttonbox)
+
+    def disable_buttonbox(self):
+        # len(self.lineEdit.text()) > 0 and \
+        goodcode = isMatchRegex(regex=ModCodeRE, text=self.lineEdit.text())
+        self.buttonBox.setEnabled(goodcode)
+
+        # check three dates for validity
+        allValid = validDefaultDate(self.lineEdit_2.text()) and validDefaultDate(self.lineEdit_3.text()) and validDefaultDate(self.lineEdit_4.text())
+        
+        self.buttonBox.setEnabled(allValid)
+
+
+    def create_definitions(self):
+        module_code: str = self.lineEdit.text().strip()
+        ay: str = self.lineEdit_academicYear.text().strip()
+        # start_semester: str = self.dateEdit_startSemester.text().strip()
+        if not check_if_module_exists(module_code):
+            create_message_box(f"Module instance {module_code} in {ay} doesn't exist!")
+            return
+
+        defWeek01 = self.dateEdit_startSemester.text().strip()
+        dow = date.fromisoformat(defWeek01).isoweekday()
+        if dow != 1:
+            create_message_box(f"Given 'Monday, Week01' of {defWeek01} is not a Monday.")
+            return
+
+        defOpenDate = self.lineEdit_2.text().strip()
+        defDueDate = self.lineEdit_3.text().strip()
+        defCutoffDate = self.lineEdit_4.text().strip()
+
+        moduleDir = const.modulePath(module_code, ay)
+        self.create_files(moduleDir)
+        self.update_definitions_file(
+            academicYear=ay, # startSemester=start_semester)
+            defWeek01=defWeek01,
+            defOpenDate=defOpenDate,
+            defDueDate=defDueDate,
+            defCutoffDate=defCutoffDate)
+    
+    def update_definitions_file(self, **kwargs):
+        # TODO: any more defs to add??
+        with open(self.definitions_path, 'a') as file:
+            yaml.dump(kwargs, file, default_flow_style=False)
+
+    def create_files(self, module_dir):
+        """create tmpdir and definitions file"""
+        self.definitions_path = os.path.join(module_dir, "definitions.yaml")
+        if not os.path.exists(self.definitions_path):
+            with open(self.definitions_path, "w"):
+                pass
 
 
 if __name__ == '__main__':

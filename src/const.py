@@ -8,13 +8,13 @@ HOST = '127.0.0.1'
 PORT = 8000
 ADDR = (HOST, PORT)
 
-HANDINHOME = "/home/healyp/handin"
+HANDINHOME = "/Users/ranya/desktop/handin"
 ROOTDIR = HANDINHOME + "/.handin"
 SRCDIR = HANDINHOME + "/src"
 
 ModCodeRE = r"^cs\d{4}$"          # UL module code re
 
-def get_class_list_file_path(module_code, ay):
+def get_class_list_file_path(module_code):
     return os.path.join(ROOTDIR, module_code, "curr", "class-list")
 
 

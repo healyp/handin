@@ -46,8 +46,6 @@ class CreateNewModuleDialog(QDialog, Ui_Dialog_Create_New_Module):
     def __init__(self, parent=None):
         super(CreateNewModuleDialog, self).__init__(parent)
         self.setupUi(self)
-        self.dateEdit_startSemester.setDisplayFormat("yyyy-MM-dd")
-        self.dateEdit_startSemester.setDate(QDate.currentDate())
         # Academic Year format: 2020-2021-S1
         self.regexAY = "\\d{4}-\\d{4}-S[1,2]"
         # self.lineEdit_academicYear.setPlaceholderText(whatAY())
@@ -55,23 +53,11 @@ class CreateNewModuleDialog(QDialog, Ui_Dialog_Create_New_Module):
         self.accepted.connect(lambda: self.create_module())
         self.buttonBox.setEnabled(False)
         self.lineEdit.textChanged.connect(self.disable_buttonbox)
-        self.groupBox_defaults.clicked.connect(self.disable_buttonbox)
-        self.lineEdit_2.textChanged.connect(self.disable_buttonbox)
-        self.lineEdit_3.textChanged.connect(self.disable_buttonbox)
-        self.lineEdit_4.textChanged.connect(self.disable_buttonbox)
 
     def disable_buttonbox(self):
         # len(self.lineEdit.text()) > 0 and \
         goodcode = isMatchRegex(regex=ModCodeRE, text=self.lineEdit.text())
         self.buttonBox.setEnabled(goodcode)
-
-        if not self.groupBox_defaults.isChecked():
-            return
-
-        # groupBox isChecked: check three dates for validity
-        allValid = validDefaultDate(self.lineEdit_2.text()) and validDefaultDate(self.lineEdit_3.text()) and validDefaultDate(self.lineEdit_4.text())
-        
-        self.buttonBox.setEnabled(allValid)
 
 
     def create_module(self):
@@ -82,37 +68,10 @@ class CreateNewModuleDialog(QDialog, Ui_Dialog_Create_New_Module):
             create_message_box(f"Module instance {module_code} in {ay} already exists!")
             return
 
-        defWeek01 = ''
-        defOpenDate = ''
-        defDueDate = ''
-        defCutoffDate = ''
-        if self.groupBox_defaults.isChecked():
-            defWeek01 = self.dateEdit_startSemester.text().strip()
-            dow = date.fromisoformat(defWeek01).isoweekday()
-            if dow != 1:
-                create_message_box(f"Given 'Monday, Week01' of {defWeek01} is not a Monday.")
-                return
-
-            defOpenDate = self.lineEdit_2.text().strip()
-            defDueDate = self.lineEdit_3.text().strip()
-            defCutoffDate = self.lineEdit_4.text().strip()
-
         moduleDir = os.path.join(ROOTDIR, module_code, ay)
         self.create_files(moduleDir)
         linkDir = os.path.join(ROOTDIR, module_code, "curr")
         os.symlink(moduleDir, linkDir)
-        self.update_definitions_file(
-            academicYear=ay, # startSemester=start_semester)
-            defWeek01=defWeek01,
-            defOpenDate=defOpenDate,
-            defDueDate=defDueDate,
-            defCutoffDate=defCutoffDate)
-
-
-    def update_definitions_file(self, **kwargs):
-        # TODO: any more defs to add??
-        with open(self.definitions_path, 'a') as file:
-            yaml.dump(kwargs, file, default_flow_style=False)
 
     def create_files(self, module_dir):
         """create tmpdir and definitions file"""
@@ -123,10 +82,6 @@ class CreateNewModuleDialog(QDialog, Ui_Dialog_Create_New_Module):
         # if not os.path.exists(self.class_list_path):
         #     with open(self.class_list_path, "w"):
         #         pass
-        self.definitions_path = os.path.join(module_dir, "definitions.yaml")
-        if not os.path.exists(self.definitions_path):
-            with open(self.definitions_path, "w"):
-                pass
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
