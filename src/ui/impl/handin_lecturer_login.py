@@ -1,4 +1,4 @@
-from PyQt5 import QtCore, QtGui, QtWidgets, QGridLayout, QLabel, QLineEdit
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -6,24 +6,35 @@ class Ui_MainWindow(object):
         MainWindow.resize(500, 300)
         MainWindow.setMinimumSize(QtCore.QSize(500, 300))
         MainWindow.setMaximumSize(QtCore.QSize(500, 300))
-        self.label_username = QtWidgets.QLabel(Dialog)
+        self.centralwidget = QtWidgets.QWidget(MainWindow)
+        self.centralwidget.setObjectName("centralwidget")
+        self.label_username = QtWidgets.QLabel(self.centralwidget)
         self.label_username.setObjectName("label_username")
-        self.label_password = QtWidgets.QLabel(Dialog)
+        self.label_password = QtWidgets.QLabel(self.centralwidget)
         self.label_password.setObjectName("label_password")
-        self.label_username.setGeometry(20, 30, 100, 30)
-        self.label_password.setGeometry(20, 90, 100, 30)
-        self.lineEdit_username = QtWidgets.QLineEdit(MainWindow)
+        self.label_username.setGeometry(110, 30, 100, 30)
+        self.label_password.setGeometry(110, 90, 100, 30)
+        self.lineEdit_username = QtWidgets.QLineEdit(self.centralwidget)
         self.lineEdit_username.setObjectName("lineEdit_username")
-        self.lineEdit_username.setGeometry(140, 30, 100, 30)
-        self.lineEdit_password = QtWidgets.QLineEdit(MainWindow)
+        self.lineEdit_username.setGeometry(200, 30, 150, 30)
+        self.lineEdit_password = QtWidgets.QLineEdit(self.centralwidget)
         self.lineEdit_password.setObjectName("lineEdit_password")
-        self.lineEdit_password.setGeometry(140, 90, 100, 30)
-        self.pushButton_login = QtWidgets
+        self.lineEdit_password.setGeometry(200, 90, 150, 30)
+        self.lineEdit_password.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.pushButton_login = QtWidgets.QPushButton(self.centralwidget)
+        self.pushButton_login.setObjectName("pushButton_Login")
+        self.pushButton_login.setGeometry(110, 150, 250, 30)
+        self.label_alert = QtWidgets.QLabel(self.centralwidget)
+        self.label_alert.setObjectName("label_alert")
+        self.label_alert.setGeometry(110, 210, 250, 30)
+        MainWindow.setCentralWidget(self.centralwidget)
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setTitle(_translate("MainWindow", "Handin Login"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "Handin System (Lecturer)"))
         self.label_username.setText(_translate("MainWindow", "Username"))
         self.label_password.setText(_translate("MainWindow", "Password"))
+        self.pushButton_login.setText(_translate("MainWindow", "Login"))
+        self.label_alert.setText(_translate("MainWindow", " "))
