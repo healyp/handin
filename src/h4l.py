@@ -14,6 +14,9 @@ from ui.impl.handin_lecturer_dialog import Ui_Dialog as Ui_Dialog_main
 from ui.impl.manage_student_marks_dialog import Ui_Dialog as Ui_Dialog_Manage_Student_Marks
 from ui.impl.create_definitions_dialog import Ui_Dialog as Ui_Dialog_Create_Definitions
 from ui.impl.clone_previous_assignment_dialog import Ui_Dialog as Ui_Dialog_Clone_Assignment
+from ui.impl.handin_lecturer_login import Ui_MainWindow as Ui_MainWindow_Lecturer_Login
+from ui.impl.handin_lecturer_dialog import Ui_Dialog as Ui_Main_Lecturer_Dialog
+from ui.impl.pick_module_dialog import Ui_Dialog as Ui_Dialog_pick_module
 
 # from dateutil.parser import parse
 from datetime import date
@@ -21,6 +24,9 @@ from datetime import date
 import const
 from const import ROOTDIR, ModCodeRE, findStudentId, whatAY, containsValidDay, check_if_module_exists, check_if_ass_exists, assPath
 
+lecturer = ""
+module = ""
+password = ""
 
 def create_message_box(text):
     msgBox = QMessageBox()
@@ -60,9 +66,68 @@ def validDefaultDate(given: str):
     else:
         return(False)
 
-class MainWindow(QMainWindow, Ui_Dialog_main):
+def getLecturerModules(lecturer):
+    filepath = "../.handin/access_rights.txt"
+    modules = []
+    with open(filepath, 'r') as f:
+        for ln in f:
+            if ln.startswith(lecturer):
+                data = ln.split()
+                for module in data[1:]:
+                    modules.append(module)
+    return modules
+
+def checkCredentials(lecturer, password):
+    filepath = "../.handin/login_credentials.txt"
+    with open(filepath, 'r') as f:
+        for ln in f:
+            if ln.startswith(lecturer):
+                data = ln.split()
+                if(data[1] == password):
+                    return True
+                else:
+                    return False
+
+
+class MainWindow(QMainWindow, Ui_MainWindow_Lecturer_Login):
     def __init__(self):
         super(MainWindow, self).__init__()
+        self.setupUi(self)
+        self.pushButton_login.clicked.connect(lambda: self.pick_module_dialog())
+
+    def pick_module_dialog(self):
+        global lecturer, password
+        lecturer = self.lineEdit_username.text().strip()
+        password = self.lineEdit_password.text().strip()
+        if(checkCredentials(lecturer, password)):
+            dialog = PickModuleDialog()
+            dialog.show()
+        else:
+            self.label_alert.setText("Wrong login credentials. Try again.")
+
+class PickModuleDialog(QDialog, Ui_Dialog_pick_module):
+    def __init__(self, parent=None):
+        super(PickModuleDialog, self).__init__()
+        self.setupUi(self)
+        modules = getLecturerModules(lecturer)
+        self.comboBox_modules.addItems(modules)
+        if(len(modules) == 0):
+            self.pushButton.setEnabled(False)
+            self.label_alert.setGeometry(50, 20, 400, 30)
+            self.label_alert.setText("You have no modules. Contact handin admin to add a module.")
+        self.pushButton.clicked.connect(lambda: self.main_dialog())
+
+    
+    def main_dialog(self):
+        global module
+        module = self.comboBox_modules.currentText()
+        dialog = MainLecturerDialog()
+        dialog.show()
+
+
+class MainLecturerDialog(QDialog, Ui_Main_Lecturer_Dialog):
+    def __init__(self, parent=None):
+        super(MainLecturerDialog, self).__init__()
         self.setupUi(self)
         self.pushButton.clicked.connect(lambda: self.manage_student_marks())
         self.pushButton_2.clicked.connect(lambda: self.createOneOffAssignment())
@@ -96,13 +161,14 @@ class ManageStudentMarksDialog(QDialog, Ui_Dialog_Manage_Student_Marks):
     def __init__(self, parent=None):
         super(ManageStudentMarksDialog, self).__init__(parent)
         self.setupUi(self)
-        self.comboBox_moduleCode.addItems(getModuleCodes())
+        # self.comboBox_moduleCode.addItems(getModuleCodes())
         self.comboBox_week.addItems(["w01", "w02", "w03", "w04", "w05", "w06", "w07",
                                     "w08", "w09", "w10", "w11", "w12", "w13"])
         self.comboBox_week.currentTextChanged.connect(self.update_table)
-        self.comboBox_moduleCode.currentTextChanged.connect(self.update_table)
+        # self.comboBox_moduleCode.currentTextChanged.connect(self.update_table)
         self.tableWidget.setEnabled(False)
         self.update_table()
+        self.label_module.setText(module)
 
     def columnFromLabel(self, label) -> int:
         model = self.tableWidget.horizontalHeader().model()
@@ -115,11 +181,11 @@ class ManageStudentMarksDialog(QDialog, Ui_Dialog_Manage_Student_Marks):
         """update table widget - signal"""
         try:
             horizontal_header_labels = ["Student ID"]
-            horizontal_header_labels += get_all_test_items(self.comboBox_moduleCode.currentText(),
+            horizontal_header_labels += get_all_test_items(module,
                                                            self.comboBox_week.currentText())
             horizontal_header_labels += ["Attempts Left", "Total Marks"]
             self.tableWidget.setColumnCount(len(horizontal_header_labels))
-            student_ids = get_all_student_ids(self.comboBox_moduleCode.currentText())
+            student_ids = get_all_student_ids(module)
             self.tableWidget.setRowCount(len(student_ids))
             self.tableWidget.setHorizontalHeaderLabels(horizontal_header_labels)
 
@@ -132,7 +198,7 @@ class ManageStudentMarksDialog(QDialog, Ui_Dialog_Manage_Student_Marks):
             try:
                 for row in range(self.tableWidget.rowCount()):
                     student_id = self.tableWidget.item(row, 0).text().strip()
-                    vars_filepath = const.get_vars_file_path(self.comboBox_moduleCode.currentText(),
+                    vars_filepath = const.get_vars_file_path(module,
                                                              self.comboBox_week.currentText(), student_id)
                     with open(vars_filepath, 'r') as stream:
                         data: dict = yaml.safe_load(stream)
@@ -146,7 +212,7 @@ class ManageStudentMarksDialog(QDialog, Ui_Dialog_Manage_Student_Marks):
             try:
                 for row in range(self.tableWidget.rowCount()):
                     student_id = self.tableWidget.item(row, 0).text().strip()
-                    vars_filepath = const.get_vars_file_path(self.comboBox_moduleCode.currentText(),
+                    vars_filepath = const.get_vars_file_path(module,
                                                              self.comboBox_week.currentText(), student_id)
                     with open(vars_filepath, 'r') as stream:
                         data: dict = yaml.safe_load(stream)
@@ -167,6 +233,7 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
     def __init__(self, parent=None):
         super(CreateOneOffAssignmentDialog, self).__init__(parent)
         self.setupUi(self)
+        self.label_module.setText(module)
         self.dateTimeEdit_startDay.setDisplayFormat("yyyy-MM-dd HH:mm")
         self.dateTimeEdit_endDay.setDisplayFormat("yyyy-MM-dd HH:mm")
         self.dateTimeEdit_cutoffDay.setDisplayFormat("yyyy-MM-dd HH:mm")
@@ -188,7 +255,7 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         self.lineEdit_test4_marks.setValidator(QRegExpValidator(regex))
         self.accepted.connect(lambda: self.createOneOffAssignment())
         self.buttonBox.setEnabled(False)
-        self.comboBox_moduleCode.editTextChanged.connect(self.disable_buttonbox)
+        # self.comboBox_moduleCode.editTextChanged.connect(self.disable_buttonbox)
         # register listeners for all line edits
         for line_edit in self.findChildren(QLineEdit):
             line_edit.textChanged.connect(self.disable_buttonbox)
@@ -204,7 +271,7 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         self.lineEdit_test3_marks.textChanged.connect(self.update_total_marks)
         self.lineEdit_test4_marks.textChanged.connect(self.update_total_marks)
         # set up initial available module codes
-        self.comboBox_moduleCode.addItems(getModuleCodes())
+        # self.comboBox_moduleCode.addItems(getModuleCodes())
         # set up week numbers
         # self.comboBox_weekNumber.addItems(["w01", "w02", "w03", "w04", "w05", "w06",
         #                                 "w07", "w08", "w09", "w10", "w11", "w12", "w13"])
@@ -298,13 +365,14 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         return attendance + compilation + test1 + test2 + test3 + test4
 
     def createOneOffAssignment(self):
-        module_code = self.comboBox_moduleCode.currentText().strip()
-        assName = self.lineEdit_assName.currentText().strip()
+        # module_code = self.comboBox_moduleCode.currentText().strip()
+        module_code = module
+        assName = self.lineEdit_assName.text().strip()
         start_day = self.dateTimeEdit_startDay.text().strip()
         end_day = self.dateTimeEdit_startDay.text().strip()
         cutoff_day = self.dateTimeEdit_cutoffDay.text().strip()
-        penalty_per_day = int(self.lineEdit_penaltyPerDay.text().strip())
-        total_attempts = int(self.lineEdit_totalAttempts.text().strip())
+        # penalty_per_day = int(self.lineEdit_penaltyPerDay.text().strip())
+        # total_attempts = int(self.lineEdit_totalAttempts.text().strip())
         collection_filename = self.lineEdit_collectFilename.text().strip()
         tests = {}
         if self.groupBox_attendance.isChecked():
@@ -386,6 +454,7 @@ class CreateRepeatAssignmentsDialog(QDialog, Ui_Dialog_Create_Repeat_Assignments
     def __init__(self, parent=None):
         super(CreateRepeatAssignmentsDialog, self).__init__(parent)
         self.setupUi(self)
+        self.label_module.setText(module)
         self.dateTimeEdit_startDay.setDisplayFormat("yyyy-MM-dd HH:mm")
         self.dateTimeEdit_endDay.setDisplayFormat("yyyy-MM-dd HH:mm")
         self.dateTimeEdit_cutoffDay.setDisplayFormat("yyyy-MM-dd HH:mm")
@@ -407,7 +476,7 @@ class CreateRepeatAssignmentsDialog(QDialog, Ui_Dialog_Create_Repeat_Assignments
         self.lineEdit_test4_marks.setValidator(QRegExpValidator(regex))
         self.accepted.connect(lambda: self.create_weekly_assignment())
         self.buttonBox.setEnabled(False)
-        self.comboBox_moduleCode.editTextChanged.connect(self.disable_buttonbox)
+        # self.comboBox_moduleCode.editTextChanged.connect(self.disable_buttonbox)
         # register listeners for all line edits
         for line_edit in self.findChildren(QLineEdit):
             line_edit.textChanged.connect(self.disable_buttonbox)
@@ -423,7 +492,7 @@ class CreateRepeatAssignmentsDialog(QDialog, Ui_Dialog_Create_Repeat_Assignments
         self.lineEdit_test3_marks.textChanged.connect(self.update_total_marks)
         self.lineEdit_test4_marks.textChanged.connect(self.update_total_marks)
         # set up initial available module codes
-        self.comboBox_moduleCode.addItems(getModuleCodes())
+        # self.comboBox_moduleCode.addItems(getModuleCodes())
         # set up week numbers
         self.comboBox_weekNumber.addItems(["w01", "w02", "w03", "w04", "w05", "w06",
                                            "w07", "w08", "w09", "w10", "w11", "w12", "w13"])
@@ -517,7 +586,8 @@ class CreateRepeatAssignmentsDialog(QDialog, Ui_Dialog_Create_Repeat_Assignments
         return attendance + compilation + test1 + test2 + test3 + test4
 
     def create_weekly_assignment(self):
-        module_code = self.comboBox_moduleCode.currentText().strip()
+        # module_code = self.comboBox_moduleCode.currentText().strip()
+        module_code = module
         week_number = self.comboBox_weekNumber.currentText().strip()
         start_day = self.dateTimeEdit_startDay.text().strip()
         end_day = self.dateTimeEdit_startDay.text().strip()
@@ -612,24 +682,26 @@ class CreateDefinitionsDialog(QDialog, Ui_Dialog_Create_Definitions):
         self.lineEdit_academicYear.setText(whatAY())
         self.accepted.connect(lambda: self.create_definitions())
         self.buttonBox.setEnabled(False)
-        self.lineEdit.textChanged.connect(self.disable_buttonbox)
-        self.lineEdit_2.textChanged.connect(self.disable_buttonbox)
-        self.lineEdit_3.textChanged.connect(self.disable_buttonbox)
-        self.lineEdit_4.textChanged.connect(self.disable_buttonbox)
+        # self.lineEdit.textChanged.connect(self.disable_buttonbox)
+        self.label_module.setText(module)
+        # self.lineEdit_2.textChanged.connect(self.disable_buttonbox)
+        # self.lineEdit_3.textChanged.connect(self.disable_buttonbox)
+        # self.lineEdit_4.textChanged.connect(self.disable_buttonbox)
+        self.buttonBox.setEnabled(True)
 
-    def disable_buttonbox(self):
-        # len(self.lineEdit.text()) > 0 and \
-        goodcode = isMatchRegex(regex=ModCodeRE, text=self.lineEdit.text())
-        self.buttonBox.setEnabled(goodcode)
-
-        # check three dates for validity
-        allValid = validDefaultDate(self.lineEdit_2.text()) and validDefaultDate(self.lineEdit_3.text()) and validDefaultDate(self.lineEdit_4.text())
-        
-        self.buttonBox.setEnabled(allValid)
+    # def disable_buttonbox(self):
+    #     # len(self.lineEdit.text()) > 0 and \
+    #     # goodcode = isMatchRegex(regex=ModCodeRE, text=module)
+    #     # self.buttonBox.setEnabled(goodcode)
+    #     # print(goodcode)
+    #     # check three dates for validity
+    #     allValid = validDefaultDate(self.lineEdit_2.text()) and validDefaultDate(self.lineEdit_3.text()) and validDefaultDate(self.lineEdit_4.text())
+    #     print(allValid)
+    #     self.buttonBox.setEnabled(allValid)
 
 
     def create_definitions(self):
-        module_code: str = self.lineEdit.text().strip()
+        module_code: str = module
         ay: str = self.lineEdit_academicYear.text().strip()
         # start_semester: str = self.dateEdit_startSemester.text().strip()
         if not check_if_module_exists(module_code):
@@ -679,8 +751,9 @@ class CloneAssignmentDialog(QDialog, Ui_Dialog_Clone_Assignment):
             lambda: self.file_save(self))
 
     def display(self):
-        filename = "/Users/ranya/Desktop/handin/.handin/cs4455/curr/assignments/w01/params.yaml"
-
+        # filename = "../.handin/cs4455/curr/assignments/w01/params.yaml"
+        ass = self.comboBox_assignments.currentText()
+        filename = os.path.join("../.handin/" + module + "/curr/assignments/" + ass +"/params.yaml")
         try:
             with open(filename, 'rb') as f:
                 content = f.read().decode('utf-8')
@@ -691,7 +764,7 @@ class CloneAssignmentDialog(QDialog, Ui_Dialog_Clone_Assignment):
         self.submit_filepath = filename
  
     def file_save(self, check_box):
-        module_code: str = "cs4455"
+        module_code: str = module
         assName: str = self.lineEdit_assName.text().strip()
         newAssPath = os.path.join(ROOTDIR + "/" + module_code + "/curr/assignments/" + assName)
         os.mkdir(newAssPath)
