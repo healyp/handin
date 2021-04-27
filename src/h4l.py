@@ -1,7 +1,7 @@
 import os
 import re
 import sys
-
+from os.path import isfile
 import yaml
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QDate, QRegExp, QDateTime
@@ -10,15 +10,16 @@ from PyQt5.QtWidgets import QMainWindow, QDialog, QMessageBox, QLineEdit, QGroup
 
 from ui.impl.createOneOffAssignment_dialog import Ui_Dialog as Ui_Dialog_CreateOneOffAssignment
 from ui.impl.create_repeat_assignments_dialog import Ui_Dialog as Ui_Dialog_Create_Repeat_Assignments
-from ui.impl.handin_lecturer_main_window import Ui_MainWindow as Ui_MainWindow
+from ui.impl.handin_lecturer_dialog import Ui_Dialog as Ui_Dialog_main
 from ui.impl.manage_student_marks_dialog import Ui_Dialog as Ui_Dialog_Manage_Student_Marks
 from ui.impl.create_definitions_dialog import Ui_Dialog as Ui_Dialog_Create_Definitions
+from ui.impl.clone_previous_assignment_dialog import Ui_Dialog as Ui_Dialog_Clone_Assignment
 
 # from dateutil.parser import parse
 from datetime import date
 
 import const
-from const import ROOTDIR, ModCodeRE, findStudentId, whatAY, containsValidDay, check_if_module_exists
+from const import ROOTDIR, ModCodeRE, findStudentId, whatAY, containsValidDay, check_if_module_exists, check_if_ass_exists, assPath
 
 
 def create_message_box(text):
@@ -32,6 +33,9 @@ def create_message_box(text):
 def getModuleCodes() -> list:
     return [name for name in os.listdir(ROOTDIR) if re.match(ModCodeRE, name)]
 
+def getModuleAssignments(module_code) -> list:
+    path = ROOTDIR + "/" + module_code + "/curr/assignments/"
+    return [name for name in os.listdir(path)]
 
 def get_all_test_items(module_code, week_number) -> list:
     params_filepath = const.get_params_file_path(module_code, week_number)
@@ -56,7 +60,7 @@ def validDefaultDate(given: str):
     else:
         return(False)
 
-class MainWindow(QMainWindow, Ui_MainWindow):
+class MainWindow(QMainWindow, Ui_Dialog_main):
     def __init__(self):
         super(MainWindow, self).__init__()
         self.setupUi(self)
@@ -64,6 +68,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_2.clicked.connect(lambda: self.createOneOffAssignment())
         self.pushButton_3.clicked.connect(lambda: self.create_repeat_assignments())
         self.pushButton_4.clicked.connect(lambda: self.create_definitions())
+        self.pushButton_5.clicked.connect(lambda: self.clone_assignment())
 
 
     def manage_student_marks(self):
@@ -80,6 +85,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def create_definitions(self):
         dialog = CreateDefinitionsDialog(self)
+        dialog.show()
+    
+    def clone_assignment(self):
+        dialog = CloneAssignmentDialog(self)
         dialog.show()
 
 
@@ -657,6 +666,57 @@ class CreateDefinitionsDialog(QDialog, Ui_Dialog_Create_Definitions):
         if not os.path.exists(self.definitions_path):
             with open(self.definitions_path, "w"):
                 pass
+
+class CloneAssignmentDialog(QDialog, Ui_Dialog_Clone_Assignment):
+    def __init__(self, parent=None):
+        super(CloneAssignmentDialog, self).__init__(parent)
+        self.setupUi(self)
+        self.comboBox_assignments.addItems(getModuleAssignments("cs4455"))
+        self.pushButton_show.clicked.connect(self.display)
+#        self.comboBox_assignments.currentTextChanged.connect(self.update_table)
+        self.textEdit_showFileContent.setReadOnly(False)
+        self.checkBox_clone.stateChanged.connect(
+            lambda: self.file_save(self))
+
+    def display(self):
+        filename = "/Users/ranya/Desktop/handin/.handin/cs4455/curr/assignments/w01/params.yaml"
+
+        try:
+            with open(filename, 'rb') as f:
+                content = f.read().decode('utf-8')
+        except Exception as e:
+            content = ""
+            print(e)
+        self.textEdit_showFileContent.setText(content)
+        self.submit_filepath = filename
+ 
+    def file_save(self, check_box):
+        module_code: str = "cs4455"
+        assName: str = self.lineEdit_assName.text().strip()
+        newAssPath = os.path.join(ROOTDIR + "/" + module_code + "/curr/assignments/" + assName)
+        os.mkdir(newAssPath)
+        filename = os.path.join(newAssPath + "/params.yaml")
+        file = open(filename, 'w')
+        file.write(self.textEdit_showFileContent.toPlainText())
+        file.close()
+
+			    
+    # def clone_assignment(self, check_box):
+    #     module_code: str = "cs4455"
+    #     #self.lineEdit_moduleCode.text().strip()
+    #     assName: str = self.lineEdit_assName.text().strip()
+    #     assClone: str = self.comboBox_assignments.currentText()
+    #     if check_if_ass_exists(module_code, "curr", assName):
+    #             create_message_box(f"Assignment {assName} instance in {module_code} in {ay} already exists!")
+    #             return
+        
+    #     assClonePath = assPath(module_code, "curr", assClone)
+    #     newAssPath = os.path.join(ROOTDIR + "/" + module_code + "/curr/assignments/" + assName)
+        
+    #     os.mkdir(newAssPath)
+        
+    #     copyCommand = "cp " + assClonePath + "/params.yaml " + newAssPath
+    #     os.system(copyCommand)
 
 
 if __name__ == '__main__':

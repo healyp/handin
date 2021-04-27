@@ -10,8 +10,8 @@ import yaml
 
 import const
 
-host = const.HANDIN_HOST
-port = const.HANDIN_PORT
+host = const.HOST
+port = const.PORT
 
 
 def get_file_content(path, mode='r'):

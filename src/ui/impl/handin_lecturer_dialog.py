@@ -11,13 +11,13 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 
-class Ui_MainWindow(object):
-    def setupUi(self, MainWindow):
-        MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(500, 300)
-        MainWindow.setMinimumSize(QtCore.QSize(500, 300))
-        MainWindow.setMaximumSize(QtCore.QSize(500, 300))
-        self.centralwidget = QtWidgets.QWidget(MainWindow)
+class Ui_Dialog(object):
+    def setupUi(self, Dialog):
+        Dialog.setObjectName("Dialog")
+        Dialog.resize(500, 300)
+        Dialog.setMinimumSize(QtCore.QSize(500, 400))
+        Dialog.setMaximumSize(QtCore.QSize(500, 400))
+        self.centralwidget = QtWidgets.QWidget(Dialog)
         self.centralwidget.setObjectName("centralwidget")
         self.pushButton = QtWidgets.QPushButton(self.centralwidget)
         self.pushButton.setGeometry(QtCore.QRect(140, 40, 200, 30))
@@ -31,15 +31,18 @@ class Ui_MainWindow(object):
         self.pushButton_4 = QtWidgets.QPushButton(self.centralwidget)
         self.pushButton_4.setGeometry(QtCore.QRect(140, 220, 200, 30))
         self.pushButton_4.setObjectName("pushButton_4")
-        MainWindow.setCentralWidget(self.centralwidget)
+        self.pushButton_5 = QtWidgets.QPushButton(self.centralwidget)
+        self.pushButton_5.setGeometry(QtCore.QRect(140, 280, 200, 30))
+        self.pushButton_5.setObjectName("pushButton_5")
+        Dialog.setCentralWidget(self.centralwidget)
+        self.retranslateUi(Dialog)
+        QtCore.QMetaObject.connectSlotsByName(Dialog)
 
-        self.retranslateUi(MainWindow)
-        QtCore.QMetaObject.connectSlotsByName(MainWindow)
-
-    def retranslateUi(self, MainWindow):
+    def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "Handin System (Lecturer)"))
-        self.pushButton.setText(_translate("MainWindow", "Manage Student Marks"))
-        self.pushButton_2.setText(_translate("MainWindow", "Create One-Off Assignment"))
-        self.pushButton_3.setText(_translate("MainWindow", "Create Repeating Assignment"))
-        self.pushButton_4.setText(_translate("MainWindow", "Create Definitions"))
+        Dialog.setWindowTitle(_translate("Dialog", "Handin System (Lecturer)"))
+        self.pushButton.setText(_translate("Dialog", "Manage Student Marks"))
+        self.pushButton_2.setText(_translate("Dialog", "Create One-Off Assignment"))
+        self.pushButton_3.setText(_translate("Dialog", "Create Repeating Assignment"))
+        self.pushButton_4.setText(_translate("Dialog", "Create Definitions"))
+        self.pushButton_5.setText(_translate("Dialog", "Clone Assignment"))

@@ -1,15 +1,13 @@
 import cgi
 import io
 import os
-import re
-import logging
 import subprocess
-import datetime
+import logging
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-from const import ADDR, HOST, PORT, ROOTDIR, SRCDIR, whatAY, findStudentId
+import const
 
-logFile = os.path.join(ROOTDIR, "registration.log")
+logFile = os.path.join(const.ROOTDIR, "registration.log")
 
 """ ###########################################
     Server for student to access and download handin.py file
@@ -51,7 +49,7 @@ class CaseNoFile(BaseCase):
         return not os.path.exists(handler.full_path)
 
     def act(self, handler):
-        raise ServerException("'{0}' not founddd".format(handler.path))
+        raise ServerException("'{0}' not found".format(handler.path))
 
 
 class CaseCgiFile(BaseCase):
@@ -83,7 +81,6 @@ class CaseDefault(BaseCase):
     def act(self, handler):
         raise ServerException("Unknown object '{0}'".format(handler.path))
 
-
 class RequestHandler(BaseHTTPRequestHandler):
     """Handle request and return page"""
 
@@ -113,24 +110,11 @@ class RequestHandler(BaseHTTPRequestHandler):
         CaseDefault(),
     ]
 
-    # base_path = DIR_ROOT
-    # handin_file_path = DIR_ROOT + DIR_TEMP
-    # student_data_path = DIR_ROOT + DIR_DATA
-    basepath = ROOTDIR
-
-    # # https://stackoverflow.com/questions/25360798/save-logs-simplehttpserver
-    # buffer = 1
-    # log_file = open(logFile, 'a', buffer)
-    # def log_message(self, format, *args):
-    #     self.log_file.write("%s: %s - %s\n" %
-    #                         (datetime.datetime.today(),
-    #                          self.client_address[0],
-    #                          format%args))
-    #     self.log_file.flush()
+    base_path = const.ROOTDIR
 
     def do_GET(self):
         try:
-            self.full_path = os.path.join(SRCDIR, "handin.html") #os.getcwd() + self.path
+            self.full_path = os.getcwd() + self.path # rel to HANDINHOME
             for case in self.cases:
                 if case.test(self):
                     case.act(self)
@@ -157,134 +141,75 @@ class RequestHandler(BaseHTTPRequestHandler):
                 line_buffering=False,
                 write_through=True,
             )
-            # for field in form.keys():
-            #     out.write('<p>{}={}</p>'.format(
-            #         field, form[field].value))
 
             modCode = form['moduleCode'].value
             student_id = form['studentID'].value
             student_name = form['studentName'].value
-            logging.info("{} - ({}, {}, {})".format(self.client_address[0], modCode, student_id, student_name))
 
-            modpath = os.path.join(ROOTDIR, modCode, "curr")
+            logging.info(f"{self.client_address[0]} - ({modCode}, {student_id}, {student_name})")
+
+            modpath = os.path.join(const.ROOTDIR, modCode, "curr")
             clpath = os.path.join(modpath, "class-list")
+
             if not self.moduleExists(modCode):
                 emsg = "Nothing known about module {}; please contact your instructor.".format(modCode)
                 out.write(self.problemPage.format(msg=emsg))
-                logging.info("{} - ({}, {}, unknown module)".format(self.client_address[0], modCode, student_id))
+                logging.info(f"{self.client_address[0]} - ({modCode}, {student_id}, unknown module)")
                 out.detach()
             elif not self.classListExists(modCode):
                 emsg = "No class list exists for module {}; please contact your instructor.".format(modCode)
                 out.write(self.problemPage.format(msg=emsg))
-                logging.info("{} - ({}, {}, no class list exists)".format(self.client_address[0], modCode, student_id))
+                logging.info(f"{self.client_address[0]} - ({modCode}, {student_id}, no class list exists)")
                 out.detach()
-            elif findStudentId(student_id, clpath) == '':
+            elif const.findStudentId(student_id, clpath) == '':
                 emsg = "Student ID {} is not on {} class list; please contact your instructor.".format(student_id, modCode)
                 out.write(self.problemPage.format(msg=emsg))
-                logging.info("{} - ({}, {}, not on class list)".format(self.client_address[0], modCode, student_id))
+                logging.info(f"{self.client_address[0]} - ({modCode}, {student_id}, not on class list)")
                 out.detach()
             else:
-                #out.write('<a href="/tmp/handin_{}.txt" download="handin.py">Download handin.py</a>'.format(student_id))
+                self.create_handin_file(modpath, modCode, student_id, student_name)
+                spath = f"/.handin/{modCode}/curr/tmp/handin_{student_id}.txt"
+                out.write(f'<h2>handin script download</h2><p>Click <a href="{spath}" download="handin.py">here</a> to download your personalised handin.py script')
 
-                self.createHandinScript(modpath, modCode, student_id, student_name)
-                out.write('<a href="/home/healyp/handin/.handin/cs4115/curr/tmp/handin_{}.txt" download="handin.py">Download handin.py</a>'.format(student_id))
                 out.detach()
-                logging.info("{} - ({}, {}, sending handin.py)".format(self.client_address[0], modCode, student_id))
-                #self.create_student_directory(student_id)
-                #self.add_student_to_class_list(student_id)
-
+                logging.info(f"{self.client_address[0]} - ({modCode}, {student_id}, sending handin.py)")
+                
         except Exception as e:
             self.handle_error(e)
 
     def moduleExists(self, mc):
-        return os.path.exists(os.path.join(ROOTDIR, mc))
+        return os.path.exists(os.path.join(const.ROOTDIR, mc))
 
     def currentSemesterExists(self, mc):
-        ay = whatAY()
-        return os.path.exists(os.path.join(ROOTDIR, mc, ay))
+        ay = const.whatAY()
+        return os.path.exists(os.path.join(const.ROOTDIR, mc, ay))
 
     def classListExists(self, mc):
-        return os.path.exists(os.path.join(ROOTDIR, mc, "curr", "class-list"))
+        return os.path.exists(os.path.join(const.ROOTDIR, mc, "curr", "class-list"))
 
-    def createHandinScript(self, modpath, modcode, studID, studname):
-        #  tmp directory should already exist
+    def create_handin_file(self, modpath, modcode, student_id, student_name):
+        # create /temp/ file directory if not exists
         tmpdir = os.path.join(modpath, "tmp")
+        if not os.path.isdir(tmpdir):
+            logging.info("{} didn't exist after all; creating now...".format(tmpdir))
+            os.mkdir(tmpdir)
         # the /temp/handin_xxx.txt must be in .txt format. It is downloaded as handin.py file
-        filename = "handin_" + studID + ".txt"
+        filename = "handin_" + student_id + ".txt"
         fpath = os.path.join(tmpdir, filename)
-        # write content of handin_student_template.py to handin_xxx.txt
+        hstpath = os.path.join(const.SRCDIR, 'handin_student_template.py')
         with open(fpath, 'wb') as f:
-            content_bytes: bytes = open('handin_student_template.py', 'rb').read()
-            content = content_bytes.decode('utf-8').format(
-                        str(HOST),  # host
-                        str(PORT),  # port
-                        str(studname),       # student name
-                        str(studID),         # student id
-                        str(modcode),        # module code
-                     ).encode('utf-8')
-            f.write(content)
-
-    def create_handin_file(self, modpath, student_id):
-        #  tmp directory should already exist
-        tmpdir = os.path.join(modpath, "tmp")
-        # the /temp/handin_xxx.txt must be in .txt format. It is downloaded as handin.py file
-        filename = "handin_" + student_id + ".txt"
-        fpath = os.path.join(tmpdir, filename)
-        with open(fpath, 'w'):
-            pass
-
-    def update_handin_file(self, student_id, student_name):
-        """write content to handin.py file"""
-        # check if handin_xxx.txt file exists
-        filename = "handin_" + student_id + ".txt"
-        if not os.path.exists(self.handin_file_path + filename):
-            self.create_handin_file(student_id)
-        # write content of handin_student_template.py to handin_xxx.txt
-        with open(self.handin_file_path + filename, 'wb') as f:
-            content_bytes: bytes = open('handin_student_template.py', 'rb').read()
+            content_bytes: bytes = open(hstpath, 'rb').read()
             content = content_bytes.decode('utf-8').format(
                         str(const.HOST),  # host
                         str(const.PORT),  # port
                         str(student_name),       # student name
                         str(student_id),         # student id
-                        str(MODULE_CODE),        # module code
-                        str(MODULE_NAME),        # module name
+                        str(modcode),        # module code
                      ).encode('utf-8')
             f.write(content)
 
-    def create_student_directory(self, student_id):
-        """create /data/**student_id**/ directory AND all weekNumbers directory"""
-        if not os.path.exists(self.student_data_path):
-            os.mkdir(self.student_data_path)
-        subdir = str(student_id)
-        if not os.path.exists(self.student_data_path + subdir):
-            os.mkdir(self.student_data_path + subdir)
-        folders = ["w01", "w02", "w03", "w04", "w05", "w06",
-                   "w07", "w08", "w09", "w10", "w11", "w12", "w13"]
-        for folder in folders:
-            week_dir = self.student_data_path + subdir + "/" + folder
-            if not os.path.exists(week_dir):
-                os.mkdir(week_dir)
-
-    def add_student_to_class_list(self, student_id):
-        """add student id to class list file"""
-        # create class-list.txt file if not exists
-        filename = DIR_ROOT + DIR_MODULE + "class-list"
-        if os.path.exists(filename):
-            append_write = 'a'
-        else:
-            append_write = 'w'
-        if not check_if_student_id_in_file(student_id):
-            class_list = open(filename, append_write)
-            class_list.write(str(student_id) + '\n')
-            class_list.close()
-
     def handle_error(self, msg):
         content = self.error_page.format(path=self.path, msg=msg)
-        self.send_content(bytes(content.encode('utf-8')), status=404)
-
-    def handleProblem(self, msg):
-        content = self.problemPage.format(m=msg)
         self.send_content(bytes(content.encode('utf-8')), status=404)
 
     def send_content(self, content: bytes, status=200):
@@ -301,11 +226,12 @@ class ServerException(Exception):
 
 
 if __name__ == '__main__':
-    serverAddr = ADDR
+    if os.getcwd() != const.HANDINHOME:
+        print(f"Must start server from {const.HANDINHOME}; exiting.")
+        exit()
+    serverAddr = const.ADDR
     server = HTTPServer(server_address=serverAddr, RequestHandlerClass=RequestHandler)
-    # print('Open http://{}:{}'.format(HOST, PORT))
-    print("Starting server; logfile \'{}\' ...".format(logFile))
+    print('Starting server ...')
     logging.basicConfig(filename=logFile, level=logging.INFO, format='%(asctime)s %(message)s')
-    logging.info('Open http://{}:{}'.format(HOST, PORT))
-
+    logging.info('Open http://{}:{}'.format(const.HOST, const.PORT))
     server.serve_forever()

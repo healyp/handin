@@ -6,7 +6,7 @@ penaltyPerDay: 1
 startDay: 22/07/2020 11:30
 tests:
   attendance:
-    marks: 1
+    marks: 567
     tag: attendance
   compilation:
     command: g++ -std=c++0x -o test test.cpp

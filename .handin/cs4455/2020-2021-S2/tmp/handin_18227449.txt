@@ -8,11 +8,11 @@ from PyQt5.QtCore import QFileInfo
 from PyQt5.QtWidgets import QMainWindow
 
 # ****** DYNAMIC CONFIGS ****** #
-HOST = "{}"
-PORT = "{}"
-STUDENT_NAME = "{}"
-STUDENT_ID = "{}"
-MODULE_CODE = "{}"
+HOST = "127.0.0.1"
+PORT = "8000"
+STUDENT_NAME = "ranya"
+STUDENT_ID = "18227449"
+MODULE_CODE = "cs4455"
 # ****** DYNAMIC CONFIGS ****** #
 
 
