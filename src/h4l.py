@@ -8,6 +8,8 @@ from PyQt5.QtCore import QDate, QRegExp, QDateTime
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtWidgets import QMainWindow, QDialog, QMessageBox, QLineEdit, QGroupBox, QTableWidgetItem
 
+from getmac import get_mac_address as gma
+
 from ui.impl.createOneOffAssignment_dialog import Ui_Dialog as Ui_Dialog_CreateOneOffAssignment
 from ui.impl.create_repeat_assignments_dialog import Ui_Dialog as Ui_Dialog_Create_Repeat_Assignments
 from ui.impl.handin_lecturer_dialog import Ui_Dialog as Ui_Dialog_main
@@ -24,9 +26,12 @@ from datetime import date
 import const
 from const import ROOTDIR, ModCodeRE, findStudentId, whatAY, containsValidDay, check_if_module_exists, check_if_ass_exists, assPath
 
+from password_security import check_encrypted_password
+
 lecturer = ""
 module = ""
 password = ""
+alertedMac = ""
 
 def create_message_box(text):
     msgBox = QMessageBox()
@@ -35,6 +40,20 @@ def create_message_box(text):
     msgBox.setWindowTitle("Message")
     msgBox.setStandardButtons(QMessageBox.Ok)
     msgBox.exec()
+
+def create_message_box_mac(lecturer, text):
+    msgBox = QMessageBox()
+    msgBox.setIcon(QMessageBox.Information)
+    msgBox.setText(text)
+    msgBox.setWindowTitle("Message")
+    msgBox.setStandardButtons(QMessageBox.Close | QMessageBox.Yes | QMessageBox.No)
+    ret = msgBox.exec()
+    if(ret == QMessageBox.Yes):
+        trustMacAddress(lecturer, "true")
+    elif(ret == QMessageBox.No):
+        trustMacAddress(lecturer, "false")
+
+
 
 def getModuleCodes() -> list:
     return [name for name in os.listdir(ROOTDIR) if re.match(ModCodeRE, name)]
@@ -83,10 +102,61 @@ def checkCredentials(lecturer, password):
         for ln in f:
             if ln.startswith(lecturer):
                 data = ln.split()
-                if(data[1] == password):
+                if(check_encrypted_password(password, data[1])):
                     return True
                 else:
                     return False
+
+def alertMacAddress(lecturer, mac):
+    global alertMacAddress
+    filepath = "../.handin/users/" + lecturer + "/mac_addresses.txt"
+    alert = False
+    line_found = False
+    if(os.path.exists(filepath)):
+        with open(filepath, 'r+') as f:
+            lines = f.readlines()
+            if(lines[0].startswith(mac)): #first mac address they used
+                line_found = True
+                for i, line in enumerate(lines):
+                    data = line.split()
+                    temp = data[1]
+                    if(temp == "true"):
+                        alert = True
+                        alertMacAddress = data[0]
+            else:
+                for i, line in enumerate(lines):
+                    if(line.startswith(mac)):
+                        line_found = True
+            if(not line_found):
+                newMac = mac + " true\n"
+                lines.append(newMac)
+            f.seek(0)
+            for line in lines:
+                f.write(line)
+    else:
+        with open(filepath, 'a') as f:
+            line = mac + " false\n"
+            f.write(line)
+    return alert
+
+def trustMacAddress(lecturer, trust):
+    filepath = "../.handin/users/" + lecturer + "/mac_addresses.txt"
+    with open(filepath, 'r+') as f:
+        lines = f.readlines()
+        for i, line in enumerate(lines):
+            if line.startswith(alertMacAddress):
+                if(trust == "true"):
+                    data = line.split()
+                    lines[i] = data[0] + " false\n"
+        f.seek(0)
+        if(trust == "false"):
+            for line in lines:
+                if(not line.startswith(alertMacAddress)):
+                    f.write(line)
+        else:
+            for line in lines:
+                f.write(line)
+        f.truncate()
 
 
 class MainWindow(QMainWindow, Ui_MainWindow_Lecturer_Login):
@@ -100,6 +170,8 @@ class MainWindow(QMainWindow, Ui_MainWindow_Lecturer_Login):
         lecturer = self.lineEdit_username.text().strip()
         password = self.lineEdit_password.text().strip()
         if(checkCredentials(lecturer, password)):
+            if(alertMacAddress(lecturer, gma())):
+                create_message_box_mac(lecturer, "Alert: Your account was accessed from a unrecognized device.\n\nIf this was you or you would like to trust this device click Yes.\n\nIf you would still like to be alerted when your account is accessed from this device click No.")
             dialog = PickModuleDialog()
             dialog.show()
         else:
