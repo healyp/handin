@@ -10,10 +10,12 @@ from PyQt5.QtWidgets import QMainWindow, QDialog, QMessageBox, QLineEdit, QGroup
 
 from ui.impl.create_new_module_dialog import Ui_Dialog as Ui_Dialog_Create_New_Module
 from ui.impl.handin_admin_main_window import Ui_MainWindow as Ui_MainWindow
+from ui.impl.create_user_dialog import Ui_Dialog as Ui_Dialog_Create_User
 
 from datetime import date
 
 from const import ROOTDIR, ModCodeRE, whatAY, containsValidDay, check_if_module_exists
+from password_security import encrypt_password
 
 def create_message_box(text):
     msgBox = QMessageBox()
@@ -37,9 +39,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         super(MainWindow, self).__init__()
         self.setupUi(self)
         self.pushButton.clicked.connect(lambda: self.create_new_module())
+        self.pushButton_user.clicked.connect(lambda: self.create_user())
 
     def create_new_module(self):
         dialog = CreateNewModuleDialog(self)
+        dialog.show()
+
+    def create_user(self):
+        dialog = CreateUserDialog(self)
         dialog.show()
 
 class CreateNewModuleDialog(QDialog, Ui_Dialog_Create_New_Module):
@@ -82,6 +89,22 @@ class CreateNewModuleDialog(QDialog, Ui_Dialog_Create_New_Module):
         # if not os.path.exists(self.class_list_path):
         #     with open(self.class_list_path, "w"):
         #         pass
+
+class CreateUserDialog(QDialog, Ui_Dialog_Create_User):
+    def __init__(self, parent=None):
+        super(CreateUserDialog, self).__init__(parent)
+        self.setupUi(self)
+        self.pushButton_create.clicked.connect(lambda: self.create_user())
+    
+    def create_user(self):
+        user = self.lineEdit_username.text().strip()
+        password = self.lineEdit_password.text().strip()
+        hashed_password = encrypt_password(password)
+        path = "../.handin/login_credentials.txt"
+        with open(path, 'a') as f:
+            line = user + " " + hashed_password + "\n"
+            f.write(line)
+        self.reject
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
