@@ -56,7 +56,7 @@ Step 13. Student - now the site http://127.0.0.1:8000 is opened for students to 
 ![img](images/student_registration.png)
 
 Step 14. Lecturer - Once the students have registered, start handin system server by running `system_server.py`. The default host and port number of system server are initiated in `const.py` by default.
-# Handin System Server Configs
+Handin System Server Configs
 HANDIN_HOST = '127.0.0.1'
 HANDIN_PORT = 5000 \
 
