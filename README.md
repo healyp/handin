@@ -37,7 +37,7 @@ Step 10.1. Lecturer - to create a one-off assignment click the _Create One-Off A
 ![img](images/Create_one_off_assignment.png)
 
 Step 10.2. Lecturer - to create a repeating assignment click the _Create Repeating Assignment_ button and fill in the blanks in the dialog that pops up then click OK. (The OK button is in a disabled state by default, unless you have completed all the assignment information that needs to be filled in. In addition, some lineedit widgets have a matching rule, for example, only numbers can be filled in the lineedit widget of _Total Attempts_). This creates a params.yaml file that handin will use to correct the student submission. \
-![img](images/Create_repeating_assignment.png)
+![img](images/create_repeating_assignment.png)
 
 Step 10.3. Lecturer - to clone a previous assignment click the _Clone Assignment_ button and fill in the balnks in the dialog that pops up then click OK. (pick an assignment from the combo box which will only display assignment found for the module you picked earlier, then fill in a name for the new assignment. Click show to display the params file of the assignment your about to clone, tick the "clone this assignment" box to confirm your choice then click OK and the params file will be copied over). \
 ![img](images/clone_assignment.png)
