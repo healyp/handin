@@ -24,7 +24,7 @@ HOST = data['system_host']
 PORT = data['system_port']
 ADDR = (HOST, PORT)
 
-RESPONSE_TIMEOUT = 5 # timeout for waiting for a response in seconds
+RESPONSE_TIMEOUT = data['response_timeout'] # timeout for waiting for a response in seconds
 
 REGISTRATION_HOST = data['registration_host']
 REGISTRATION_PORT = data['registration_port']
@@ -44,8 +44,16 @@ class FileServerCommands:
     GET_LECTURER_MODULES = "get_lecturer_modules"
     MODULE_INFO = "get_module_info"
     GET_VARS = "get_vars"
+    CHECK_EXISTS = "check_exists"
+    CREATE_WEEK_DIRECTORY = "create_week_directory"
+    UPDATE_PARAMS_FILE = "update_params_file"
+    CREATE_DEFINITIONS_FILE = "create_definitions_file"
+    UPDATE_DEFINITIONS_FILE = "update_definitions_file"
+    GET_PARAMS = "get_params"
+    FILE_SAVE = "file_save"
     VALID_COMMANDS = [AUTHENTICATE_LECTURER, ALERT_MAC_ADDRESS, TRUST_MAC_ADDRESS, GET_LECTURER_MODULES, MODULE_INFO
-                     , GET_VARS]
+                     , GET_VARS, CHECK_EXISTS, CREATE_WEEK_DIRECTORY, UPDATE_PARAMS_FILE, CREATE_DEFINITIONS_FILE
+                     , UPDATE_DEFINITIONS_FILE, GET_PARAMS, FILE_SAVE]
 
     @staticmethod
     def validateCommand(command):
@@ -63,6 +71,18 @@ class FileServerCommands:
         @staticmethod
         def validateCode(code):
             return code in FileServerCommands.ModuleInfoRequestCodes.VALID_CODES
+
+    class CheckExistsRequestCodes:
+        CODE = "request_code"
+
+        WEEK_EXISTS = "week_exists"
+        MODULE_EXISTS = "module_exists"
+        ASSIGNMENT_EXISTS = "assignment_exists"
+        VALID_CODES = [WEEK_EXISTS, MODULE_EXISTS, ASSIGNMENT_EXISTS]
+
+        @staticmethod
+        def validateCode(code):
+            return code in FileServerCommands.CheckExistsRequestCodes.VALID_CODES
 
 
 def get_class_list_file_path(module_code):
@@ -94,7 +114,6 @@ def check_if_module_exists(mc: str) -> bool:
         # if module_code.lower() in modules:
         return True
     return False
-
 
 def findStudentId(stuId: str, filePath: str):
     regex = "\\b{}\\b".format(stuId)
