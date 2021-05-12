@@ -5,7 +5,7 @@ import os
 import signal
 import logging
 import threading
-from handin_messaging import Request, Response, listenerSocket, acceptSocket, respond
+from handin_messaging import Request, listenerSocket, acceptSocket, respond
 from traceback import format_exc
 from const import ROOTDIR, FileServerCommands
 from password_security import check_encrypted_password

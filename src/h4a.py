@@ -2,17 +2,12 @@ import os
 import re
 import sys
 
-import yaml
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import QDate, QRegExp, QDateTime
-from PyQt5.QtGui import QRegExpValidator
-from PyQt5.QtWidgets import QMainWindow, QDialog, QMessageBox, QLineEdit, QGroupBox, QTableWidgetItem, QErrorMessage
+from PyQt5 import QtWidgets
+from PyQt5.QtWidgets import QMainWindow, QDialog, QMessageBox
 
 from ui.impl.create_new_module_dialog import Ui_Dialog as Ui_Dialog_Create_New_Module
 from ui.impl.handin_admin_main_window import Ui_MainWindow as Ui_MainWindow
 from ui.impl.create_user_dialog import Ui_Dialog as Ui_Dialog_Create_User
-
-from datetime import date
 
 from const import ROOTDIR, ModCodeRE, whatAY, containsValidDay, check_if_module_exists
 from password_security import encrypt_password

@@ -1,13 +1,10 @@
-import os
 import re
 import sys
-from os.path import isfile
-import yaml
 import logging
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QDate, QRegExp, QDateTime
 from PyQt5.QtGui import QRegExpValidator
-from PyQt5.QtWidgets import QMainWindow, QDialog, QMessageBox, QLineEdit, QGroupBox, QTableWidgetItem, QErrorMessage
+from PyQt5.QtWidgets import QMainWindow, QDialog, QMessageBox, QLineEdit, QGroupBox, QTableWidgetItem
 
 from traceback import format_exc
 
@@ -27,12 +24,8 @@ from ui.impl.pick_module_dialog import Ui_Dialog as Ui_Dialog_pick_module
 from datetime import date
 
 import const
-from const import ROOTDIR, ModCodeRE, findStudentId, whatAY, containsValidDay, check_if_module_exists, check_if_ass_exists, assPath, FileServerCommands
-
-from password_security import check_encrypted_password
-
-import handin_messaging
-from handin_messaging import Request, Response, connectedSocket, MessagingError, request
+from const import whatAY, containsValidDay, FileServerCommands
+from handin_messaging import Request, connectedSocket, MessagingError, request
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(asctime)s %(message)s')
 

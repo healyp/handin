@@ -9,7 +9,7 @@ from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtWidgets import QMainWindow, QDialog, QMessageBox, QLineEdit, QGroupBox, QTableWidgetItem
 
 import const
-from const import ROOTDIR, SRCDIR, ModCodeRE, whatAY, findStudentId
+from const import ROOTDIR, ModCodeRE, whatAY
 
 from ui.impl.create_new_module_dialog import Ui_Dialog as Ui_Dialog_Create_New_Module
 from ui.impl.create_weekly_assignment_dialog import Ui_Dialog as Ui_Dialog_Create_Weekly_Assignment
