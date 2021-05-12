@@ -173,7 +173,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
                 out.detach()
                 logging.info(f"{self.client_address[0]} - ({modCode}, {student_id}, sending handin.py)")
-                
+
         except Exception as e:
             self.handle_error(e)
 
@@ -205,6 +205,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                         str(student_name),       # student name
                         str(student_id),         # student id
                         str(modcode),        # module code
+                        str("N/A") # TODO module name
                      ).encode('utf-8')
             f.write(content)
 
@@ -229,9 +230,9 @@ if __name__ == '__main__':
     if os.getcwd() != const.HANDINHOME:
         print(f"Must start server from {const.HANDINHOME}; exiting.")
         exit()
-    serverAddr = const.ADDR
+    serverAddr = const.REGISTRATION_ADDR
     server = HTTPServer(server_address=serverAddr, RequestHandlerClass=RequestHandler)
     print('Starting server ...')
     logging.basicConfig(filename=logFile, level=logging.INFO, format='%(asctime)s %(message)s')
-    logging.info('Open http://{}:{}'.format(const.HOST, const.PORT))
+    logging.info('Open http://{}:{}'.format(const.REGISTRATION_HOST, const.REGISTRATION_PORT))
     server.serve_forever()

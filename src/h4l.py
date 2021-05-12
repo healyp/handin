@@ -3,10 +3,13 @@ import re
 import sys
 from os.path import isfile
 import yaml
+import logging
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QDate, QRegExp, QDateTime
 from PyQt5.QtGui import QRegExpValidator
-from PyQt5.QtWidgets import QMainWindow, QDialog, QMessageBox, QLineEdit, QGroupBox, QTableWidgetItem
+from PyQt5.QtWidgets import QMainWindow, QDialog, QMessageBox, QLineEdit, QGroupBox, QTableWidgetItem, QErrorMessage
+
+from traceback import format_exc
 
 from getmac import get_mac_address as gma
 
@@ -24,14 +27,60 @@ from ui.impl.pick_module_dialog import Ui_Dialog as Ui_Dialog_pick_module
 from datetime import date
 
 import const
-from const import ROOTDIR, ModCodeRE, findStudentId, whatAY, containsValidDay, check_if_module_exists, check_if_ass_exists, assPath
+from const import ROOTDIR, ModCodeRE, findStudentId, whatAY, containsValidDay, check_if_module_exists, check_if_ass_exists, assPath, FileServerCommands
 
 from password_security import check_encrypted_password
+
+import handin_messaging
+from handin_messaging import Request, Response, connectedSocket, MessagingError, request
+
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(asctime)s %(message)s')
 
 lecturer = ""
 module = ""
 password = ""
 alertedMac = ""
+
+s = None
+
+class ErrorDialog(QtWidgets.QErrorMessage):
+    def __init__(self, closeOnOk = False):
+        super().__init__()
+        self.closeOnOk = closeOnOk
+
+    def show(self):
+        self.exec()
+        if self.closeOnOk:
+            sys.exit(0)
+
+    def closeEvent(self, event):
+        if self.closeOnOk:
+            sys.exit(0)
+
+def doError(message, closeOnOk = False):
+    error_dialog = ErrorDialog(closeOnOk)
+    error_dialog.showMessage(message)
+    error_dialog.show()
+
+def setSocket(initialLaunch = False):
+    global s
+    try:
+        if s is None:
+            s = connectedSocket(const.FILE_ADDR)
+            logging.info(f"Connected to handin_file_server on {const.FILE_ADDR}")
+
+        return True
+    except Exception as e:
+        logging.error(f"Failed to connect to handin_file_server with error: {e}")
+        doError(f"Failed to connect to Handin File Server, please try again later. (Is handin_file_server running on the following machine: Host: {const.FILE_SERVER_HOST} Port: {const.FILE_SERVER_PORT}?) Error: {e}", initialLaunch)
+        return False
+
+def disconnect():
+    global s
+
+    if s is not None:
+        s.close()
+        logging.info("Disconnected from handin_file_server")
 
 def create_message_box(text):
     msgBox = QMessageBox()
@@ -52,29 +101,157 @@ def create_message_box_mac(lecturer, text):
         trustMacAddress(lecturer, "true")
     elif(ret == QMessageBox.No):
         trustMacAddress(lecturer, "false")
-
-
+    elif(ret == QMessageBox.Close):
+        disconnect()
+        sys.exit(0)
 
 def getModuleCodes() -> list:
-    return [name for name in os.listdir(ROOTDIR) if re.match(ModCodeRE, name)]
+    global s
+    try:
+        if setSocket():
+            args = {}
+            addLecturerAuthDetails(args)
+            args[FileServerCommands.ModuleInfoRequestCodes.CODE] = FileServerCommands.ModuleInfoRequestCodes.MODULE_CODES
+
+            response = request(Request(s, FileServerCommands.MODULE_INFO, args))
+
+            if response is not None:
+                if not response.disconnected:
+                    if response.success == "True":
+                        return response.data['module_codes'], False
+                    else:
+                        error = True
+                        doError(f"A server error occurred retrieving module codes: {response.message}")
+                else:
+                    s = None
+                    error = True
+                    if response.error:
+                        logging.error(f"Response Error: {response.error_message}")
+            else:
+                s = None
+                error = True
+                if request.error:
+                    logging.error(f"Request Error: {request.error_message}")
+        else:
+            error = True
+    except (MessagingError) as m:
+        s = None
+        doError(f"{m}")
+        error = True
+
+    return [], error
 
 def getModuleAssignments(module_code) -> list:
-    path = ROOTDIR + "/" + module_code + "/curr/assignments/"
-    return [name for name in os.listdir(path)]
+    global s
+    try:
+        if setSocket():
+            args = {}
+            addLecturerAuthDetails(args)
+            args[FileServerCommands.ModuleInfoRequestCodes.CODE] = FileServerCommands.ModuleInfoRequestCodes.MODULE_ASSIGNMENTS
+            args['module_code'] = module_code
+
+            response = request(Request(s, FileServerCommands.MODULE_INFO, args))
+
+            if response is not None:
+                if not response.disconnected:
+                    if response.success == "True":
+                        return response.data['module_assignments'], False
+                    else:
+                        error = True
+                        doError(f"A server error occurred retrieving assignments: {response.message}")
+                else:
+                    s = None
+                    error = True
+                    if response.error:
+                        logging.error(f"Response Error: {response.error_message}")
+            else:
+                s = None
+                error = True
+                if request.error:
+                    logging.error(f"Request Error: {request.error_message}")
+        else:
+            error = True
+    except (MessagingError) as m:
+        s = None
+        doError(f"{m}")
+        error = True
+
+    return [], error
 
 def get_all_test_items(module_code, week_number) -> list:
-    params_filepath = const.get_params_file_path(module_code, week_number)
-    with open(params_filepath, 'r') as stream:
-        data: dict = yaml.safe_load(stream)
-    return [item for item in data["tests"].keys()]
+    global s
+    try:
+        if setSocket():
+            args = {}
+            addLecturerAuthDetails(args)
+            args[FileServerCommands.ModuleInfoRequestCodes.CODE] = FileServerCommands.ModuleInfoRequestCodes.MODULE_TEST_ITEMS
+            args['module_code'] = module_code
+            args['week_number'] = week_number
 
+            response = request(Request(s, FileServerCommands.MODULE_INFO, args))
+
+            if response is not None:
+                if not response.disconnected:
+                    if response.success == "True":
+                        return response.data['test_items'], False
+                    else:
+                        error = True
+                        doError(f"A server error occurred retrieving test items: {response.message}")
+                else:
+                    s = None
+                    error = True
+                    if response.error:
+                        logging.error(f"Response Error: {response.error_message}")
+            else:
+                s = None
+                error = True
+                if request.error:
+                    logging.error(f"Request Error: {request.error_message}")
+        else:
+            error = True
+    except (MessagingError) as m:
+        s = None
+        doError(f"{m}")
+        error = True
+
+    return [], error
 
 def get_all_student_ids(module_code) -> list:
-    class_list_filepath = const.get_class_list_file_path(module_code)
-    with open(class_list_filepath, 'r') as f:
-        content = f.readlines()
-    content = [x.strip() for x in content]
-    return content
+    global s
+    try:
+        if setSocket():
+            args = {}
+            addLecturerAuthDetails(args)
+            args[FileServerCommands.ModuleInfoRequestCodes.CODE] = FileServerCommands.ModuleInfoRequestCodes.MODULE_STUDENT_IDS
+            args['module_code'] = module_code
+
+            response = request(Request(s, FileServerCommands.MODULE_INFO, args))
+
+            if response is not None:
+                if not response.disconnected:
+                    if response.success == "True":
+                        return response.data['student_ids'], False
+                    else:
+                        error = True
+                        doError(f"A server error occurred retrieving student IDs: {response.message}")
+                else:
+                    s = None
+                    error = True
+                    if response.error:
+                        logging.error(f"Response Error: {response.error_message}")
+            else:
+                s = None
+                error = True
+                if request.error:
+                    logging.error(f"Request Error: {request.error_message}")
+        else:
+            error = True
+    except (MessagingError) as m:
+        s = None
+        doError(f"{m}")
+        error = True
+
+    return [], error
 
 def isMatchRegex(regex: str, text: str) -> bool:
     return bool(re.match(regex, text, re.IGNORECASE))
@@ -85,111 +262,633 @@ def validDefaultDate(given: str):
     else:
         return(False)
 
+
+def addLecturerAuthDetails(request_data: dict):
+    if lecturer != "" and password != "":
+        request_data['lecturer'] = lecturer
+        request_data['password'] = password
+
 def getLecturerModules(lecturer):
-    filepath = "../.handin/access_rights.txt"
-    modules = []
-    with open(filepath, 'r') as f:
-        for ln in f:
-            if ln.startswith(lecturer):
-                data = ln.split()
-                for module in data[1:]:
-                    modules.append(module)
-    return modules
+    global s
+    try:
+        if setSocket():
+            args = {}
+            addLecturerAuthDetails(args)
+
+            response = request(Request(s, FileServerCommands.GET_LECTURER_MODULES, args))
+
+            if response is not None:
+                if not response.disconnected:
+                    if response.success == "True":
+                        modules = []
+                        for value in response.data['modules']:
+                            modules.append(value)
+
+                        return modules, False
+                    else:
+                        error = True
+                        doError(f"A server error occurred retrieving lecturer modules: {response.message}")
+                else:
+                    s = None
+                    error = True
+                    if response.error:
+                        logging.error(f"Response Error: {response.error_message}")
+            else:
+                s = None
+                error = True
+                if request.error:
+                    logging.error(f"Request Error: {request.error_message}")
+        else:
+            error = True
+    except (MessagingError) as m:
+        s = None
+        doError(f"{m}")
+        error = True
+
+    return {}, error
 
 def checkCredentials(lecturer, password):
-    filepath = "../.handin/login_credentials.txt"
-    with open(filepath, 'r') as f:
-        for ln in f:
-            if ln.startswith(lecturer):
-                data = ln.split()
-                if(check_encrypted_password(password, data[1])):
-                    return True
+    global s
+    try:
+        if setSocket():
+            args = {}
+            addLecturerAuthDetails(args)
+
+            response = request(Request(s, FileServerCommands.AUTHENTICATE_LECTURER, args))
+
+            if response is not None:
+                if not response.disconnected:
+                    if response.success == "True":
+                        if response.message == "AUTHENTICATED":
+                            return True, False
+                        elif response.message == "NOT_AUTHENTICATED":
+                            return False, False # Return false for login_error parameter as this failure is a credential error, not socket error
+                        else:
+                            login_error = True
+                            doError(f"A server error occurred checking credentials: {response.message}")
+                    else:
+                        login_error = True
+                        doError(f"A server error occurred checking credentials: {response.message}")
                 else:
-                    return False
+                    s = None
+                    login_error = True
+                    if response.error:
+                        logging.error(f"Response Error: {response.error_message}")
+            else:
+                s = None
+                error = True
+                if request.error:
+                    logging.error(f"Request Error: {request.error_message}")
+        else:
+            login_error = True
+    except (MessagingError) as m:
+        s = None
+        doError(f"{m}")
+        login_error = True
+
+    return False, login_error
 
 def alertMacAddress(lecturer, mac):
-    global alertMacAddress
-    filepath = "../.handin/users/" + lecturer + "/mac_addresses.txt"
-    alert = False
-    line_found = False
-    if(os.path.exists(filepath)):
-        with open(filepath, 'r+') as f:
-            lines = f.readlines()
-            if(lines[0].startswith(mac)): #first mac address they used
-                line_found = True
-                for i, line in enumerate(lines):
-                    data = line.split()
-                    temp = data[1]
-                    if(temp == "true"):
-                        alert = True
-                        alertMacAddress = data[0]
+    global alertMacAddressStr, s
+    try:
+        if setSocket():
+            args = {}
+            addLecturerAuthDetails(args)
+            args['mac'] = mac
+
+            response = request(Request(s, FileServerCommands.ALERT_MAC_ADDRESS, args))
+
+            if response is not None:
+                if not response.disconnected:
+                    if response.success == "True":
+                        data = response.data
+
+                        if 'alertMacAddress' in data:
+                            alertMacAddressStr = data['alertMacAddress']
+
+                        alert = False
+                        if 'alert' in data:
+                            alert = data['alert']
+
+                        alert = alert.upper()
+
+                        if alert == "TRUE":
+                            alert = True
+                        else:
+                            alert = False
+
+                        return alert, False
+                    else:
+                        error = True
+                        doError(f"A server error occurred checking if MAC address should be alerted: {response.message}")
+                else:
+                    s = None
+                    error = True
+                    if response.error:
+                        logging.error(f"Response Error: {response.error_message}")
             else:
-                for i, line in enumerate(lines):
-                    if(line.startswith(mac)):
-                        line_found = True
-            if(not line_found):
-                newMac = mac + " true\n"
-                lines.append(newMac)
-            f.seek(0)
-            for line in lines:
-                f.write(line)
-    else:
-        with open(filepath, 'a') as f:
-            line = mac + " false\n"
-            f.write(line)
-    return alert
+                s = None
+                error = True
+                if request.error:
+                    logging.error(f"Request Error: {request.error_message}")
+        else:
+            error = True
+    except (MessagingError) as m:
+        s = None
+        doError(f"{m}")
+        error = True
+
+    return False, error
 
 def trustMacAddress(lecturer, trust):
-    filepath = "../.handin/users/" + lecturer + "/mac_addresses.txt"
-    with open(filepath, 'r+') as f:
-        lines = f.readlines()
-        for i, line in enumerate(lines):
-            if line.startswith(alertMacAddress):
-                if(trust == "true"):
-                    data = line.split()
-                    lines[i] = data[0] + " false\n"
-        f.seek(0)
-        if(trust == "false"):
-            for line in lines:
-                if(not line.startswith(alertMacAddress)):
-                    f.write(line)
-        else:
-            for line in lines:
-                f.write(line)
-        f.truncate()
+    global s
+    try:
+        if setSocket():
+            args = {}
+            addLecturerAuthDetails(args)
+            args['mac'] = alertMacAddressStr
+            args['trust'] = trust
 
+            response = request(Request(s, FileServerCommands.TRUST_MAC_ADDRESS, args))
+
+            if response is not None:
+                if not response.disconnected:
+                    if response.success == "True":
+                        return False
+                    else:
+                        error = True
+                        doError(f"A server error occurred trusting MAC address: {response.message}")
+                else:
+                    s = None
+                    error = True
+                    if response.error:
+                        logging.error(f"Response Error: {response.error_message}")
+            else:
+                s = None
+                error = True
+                if request.error:
+                    logging.error(f"Request Error: {request.error_message}")
+        else:
+            error = True
+    except (MessagingError) as m:
+        s = None
+        doError(f"{m}")
+        error = True
+
+    return error
+
+def get_vars(module, week_number, student_id):
+    global s
+    try:
+        if setSocket():
+            args = {
+                'module': module,
+                'week_number': week_number,
+                'student_id': student_id
+            }
+
+            response = request(Request(s, FileServerCommands.GET_VARS, args))
+
+            if response is not None:
+                if not response.disconnected:
+                    if response.success == "True":
+                        return response.data['vars'], False
+                    else:
+                        error = True
+                        doError(f"A server error occurred retrieving vars: {response.message}")
+                else:
+                    s = None
+                    error = True
+                    if response.error:
+                        logging.error(f"Response Error: {response.error_message}")
+            else:
+                s = None
+                error = True
+                if request.error:
+                    logging.error(f"Request Error: {request.error_message}")
+        else:
+            error = True
+    except (MessagingError) as m:
+        s = None
+        doError(f"{m}")
+        error = True
+
+    return {}, error
+
+def checkWeekExists(module, week_number):
+    global s
+    try:
+        if setSocket():
+            args = {
+                FileServerCommands.CheckExistsRequestCodes.CODE: FileServerCommands.CheckExistsRequestCodes.WEEK_EXISTS,
+                'module': module,
+                'week_number': week_number
+            }
+
+            response = request(Request(s, FileServerCommands.CHECK_EXISTS, args))
+
+            if response is not None:
+                if not response.disconnected:
+                    if response.success == "True":
+                        exists = response.data['exists']
+
+                        if (exists == "True"):
+                            exists = True
+                        else:
+                            exists = False
+
+                        return exists, False
+                    else:
+                        error = True
+                        doError(f"A server error occurred checking if week exists: {response.message}")
+                else:
+                    s = None
+                    error = True
+                    if response.error:
+                        logging.error(f"Response Error: {response.error_message}")
+            else:
+                s = None
+                error = True
+                if request.error:
+                    logging.error(f"Request Error: {request.error_message}")
+
+        else:
+            error = True
+    except (MessagingError) as m:
+        s = None
+        doError(f"{m}")
+        error = True
+
+    return False, error
+
+def checkModuleExists(module):
+    global s
+    try:
+        if setSocket():
+            args = {
+                FileServerCommands.CheckExistsRequestCodes.CODE: FileServerCommands.CheckExistsRequestCodes.MODULE_EXISTS,
+                'module': module
+            }
+
+            response = request(Request(s, FileServerCommands.CHECK_EXISTS, args))
+
+            if response is not None:
+                if not response.disconnected:
+                    if response.success == "True":
+                        exists = response.data['exists']
+
+                        if exists == "True":
+                            exists = True
+                        else:
+                            exists = False
+
+                        return exists, False
+                    else:
+                        error = True
+                        doError(f"A server error occurred checking if module exists: {response.message}")
+                else:
+                    s = None
+                    error = True
+                    if response.error:
+                        logging.error(f"Response Error: {response.error_message}")
+            else:
+                s = None
+                error = True
+                if request.error:
+                    logging.error(f"Request Error: {request.error_message}")
+
+        else:
+            error = True
+    except (MessagingError) as m:
+        s = None
+        doError(f"{m}")
+        error = True
+
+    return False, error
+
+def checkAssignmentExists(module, academic_year, assignment):
+    global s
+    try:
+        if setSocket():
+            args = {
+                FileServerCommands.CheckExistsRequestCodes.CODE: FileServerCommands.CheckExistsRequestCodes.ASSIGNMENT_EXISTS,
+                'module': module,
+                'academic_year': academic_year,
+                'assignment': assignment
+            }
+
+            response = request(Request(s, FileServerCommands.CHECK_EXISTS, args))
+
+            if response is not None:
+                if not response.disconnected:
+                    if response.success == "True":
+                        exists = response.data['exists']
+
+                        if exists == "True":
+                            exists = True
+                        else:
+                            exists = False
+
+                        return exists, False
+                    else:
+                        error = True
+                        doError(f"A server error occurred checking if assignment exists: {response.message}")
+                else:
+                    s = None
+                    error = True
+                    if response.error:
+                        logging.error(f"Response Error: {response.error_message}")
+            else:
+                s = None
+                error = True
+                if request.error:
+                    logging.error(f"Request Error: {request.error_message}")
+
+        else:
+            error = True
+    except (MessagingError) as m:
+        s = None
+        doError(f"{m}")
+        error = True
+
+    return False, error
+
+def createWeekDirectory(module, week_number):
+    global s
+    try:
+        if setSocket():
+            args = {
+                'module': module,
+                'week_number': week_number
+            }
+
+            response = request(Request(s, FileServerCommands.CREATE_WEEK_DIRECTORY, args))
+
+            if response is not None:
+                if not response.disconnected:
+                    if response.success == "True":
+                        return response.data['params_path'], False
+                    else:
+                        error = True
+                        doError(f"A server error occurred checking if assignment exists: {response.message}")
+                else:
+                    s = None
+                    error = True
+                    if response.error:
+                        logging.error(f"Response Error: {response.error_message}")
+            else:
+                s = None
+                error = True
+                if request.error:
+                    logging.error(f"Request Error: {request.error_message}")
+
+        else:
+            error = True
+    except (MessagingError) as m:
+        s = None
+        doError(f"{m}")
+        error = True
+
+    return "", error
+
+def updateParamsFile(params_file, params):
+    global s
+    try:
+        if setSocket():
+            args = {
+                'params_file': params_file,
+                'params': params
+            }
+
+            response = request(Request(s, FileServerCommands.UPDATE_PARAMS_FILE, args))
+
+            if response is not None:
+                if not response.disconnected:
+                    if response.success == "True":
+                        return False
+                    else:
+                        error = True
+                        doError(f"A server error occurred updating params file: {response.message}")
+                else:
+                    s = None
+                    error = True
+                    if response.error:
+                        logging.error(f"Response Error: {response.error_message}")
+            else:
+                s = None
+                error = True
+                if request.error:
+                    logging.error(f"Request Error: {request.error_message}")
+        else:
+            error = True
+    except (MessagingError) as m:
+        s = None
+        doError(f"{m}")
+        error = True
+
+    return error
+
+def createDefinitionsFile(module, academic_year):
+    global s
+    try:
+        if setSocket():
+            args = {
+                'module': module,
+                'academic_year': academic_year
+            }
+
+            response = request(Request(s, FileServerCommands.CREATE_DEFINITIONS_FILE, args))
+
+            if response is not None:
+                if not response.disconnected:
+                    if response.success == "True":
+                        return response.data['definitions_path'], False
+                    else:
+                        error = True
+                        doError(f"A server error occurred creating definitions file: {response.message}")
+                else:
+                    s = None
+                    error = True
+                    if response.error:
+                        logging.error(f"Response Error: {response.error_message}")
+            else:
+                s = None
+                error = True
+                if request.error:
+                    logging.error(f"Request Error: {request.error_message}")
+        else:
+            error = True
+    except (MessagingError) as m:
+        s = None
+        doError(f"{m}")
+        error = True
+
+    return "", error
+
+def updateDefinitionsFile(definitions_file, definitions):
+    global s
+    try:
+        if setSocket():
+            args = {
+                'definitions_file': definitions_file,
+                'definitions': definitions
+            }
+
+            response = request(Request(s, FileServerCommands.UPDATE_DEFINITIONS_FILE, args))
+
+            if response is not None:
+                if not response.disconnected:
+                    if response.success == "True":
+                        return False
+                    else:
+                        error = True
+                        doError(f"A server error occurred updating definitions file: {response.message}")
+                else:
+                    s = None
+                    error = True
+                    if response.error:
+                        logging.error(f"Response Error: {response.error_message}")
+            else:
+                s = None
+                error = True
+                if request.error:
+                    logging.error(f"Request Error: {request.error_message}")
+        else:
+            error = True
+    except (MessagingError) as m:
+        s = None
+        doError(f"{m}")
+        error = True
+
+    return error
+
+def getParams(module, assignment):
+    global s
+    try:
+        if setSocket():
+            args = {
+                'module': module,
+                'assignment': assignment
+            }
+
+            response = request(Request(s, FileServerCommands.GET_PARAMS, args))
+
+            if response is not None:
+                if not response.disconnected:
+                    if response.success == "True":
+                        return response.data['content'], response.data['filename'], False
+                    else:
+                        error = True
+                        doError(f"A server error occurred retrieving params: {response.message}")
+                else:
+                    s = None
+                    error = True
+                    if response.error:
+                        logging.error(f"Response Error: {response.error_message}")
+            else:
+                s = None
+                error = True
+                if request.error:
+                    logging.error(f"Request Error: {request.error_message}")
+        else:
+            error = True
+    except (MessagingError) as m:
+        s = None
+        doError(f"{m}")
+        error = True
+
+    return "", "", error
+
+def saveFile(module, assignment):
+    global s
+    try:
+        if setSocket():
+            args = {
+                'module': module,
+                'assignment': assignment
+            }
+
+            response = request(Request(s, FileServerCommands.FILE_SAVE, args))
+
+            if response is not None:
+                if not response.disconnected:
+                    if response.success == "True":
+                        return False
+                    else:
+                        error = True
+                        doError(f"A server error occurred saving file: {response.message}")
+                else:
+                    s = None
+                    error = True
+                    if response.error:
+                        logging.error(f"Response Error: {response.error_message}")
+            else:
+                s = None
+                error = True
+                if request.error:
+                    logging.error(f"Request Error: {request.error_message}")
+        else:
+            error = True
+    except (MessagingError) as m:
+        s = None
+        doError(f"{m}")
+        error = True
+
+    return error
 
 class MainWindow(QMainWindow, Ui_MainWindow_Lecturer_Login):
     def __init__(self):
         super(MainWindow, self).__init__()
         self.setupUi(self)
         self.pushButton_login.clicked.connect(lambda: self.pick_module_dialog())
+        setSocket(True)
 
     def pick_module_dialog(self):
         global lecturer, password
         lecturer = self.lineEdit_username.text().strip()
         password = self.lineEdit_password.text().strip()
-        if(checkCredentials(lecturer, password)):
-            if(alertMacAddress(lecturer, gma())):
-                create_message_box_mac(lecturer, "Alert: Your account was accessed from a unrecognized device.\n\nIf this was you or you would like to trust this device click Yes.\n\nIf you would still like to be alerted when your account is accessed from this device click No.")
-            dialog = PickModuleDialog()
-            dialog.show()
+        if lecturer == "" or password == "":
+            self.label_alert.setText("You need to fill in both fields")
         else:
-            self.label_alert.setText("Wrong login credentials. Try again.")
+            authenticated, login_error = checkCredentials(lecturer, password)
+            if(authenticated):
+                self.label_alert.setText("")
+                alert, error = alertMacAddress(lecturer, gma())
+                if not error:
+                    if alert:
+                        create_message_box_mac(lecturer, "Alert: Your account was accessed from a unrecognized device.\n\nIf this was you or you would like to trust this device click Yes.\n\nIf you would still like to be alerted when your account is accessed from this device click No.")
+                    dialog = PickModuleDialog()
+                    dialog.show()
+            else:
+                if not login_error:
+                    self.label_alert.setText("Wrong login credentials. Try again.")
+                else:
+                    self.label_alert.setText("Error occurred. Try again.")
+
+    def closeEvent(self, event):
+        disconnect()
+        event.accept()
+        sys.exit(0)
 
 class PickModuleDialog(QDialog, Ui_Dialog_pick_module):
     def __init__(self, parent=None):
         super(PickModuleDialog, self).__init__()
         self.setupUi(self)
-        modules = getLecturerModules(lecturer)
-        self.comboBox_modules.addItems(modules)
-        if(len(modules) == 0):
+        modules, error = getLecturerModules(lecturer)
+
+        if not error:
+            self.comboBox_modules.addItems(modules)
+            if(len(modules) == 0):
+                self.pushButton.setEnabled(False)
+                self.label_alert.setGeometry(50, 20, 400, 30)
+                self.label_alert.setText("You have no modules. Contact handin admin to add a module.")
+            self.pushButton.clicked.connect(lambda: self.main_dialog())
+        else:
             self.pushButton.setEnabled(False)
             self.label_alert.setGeometry(50, 20, 400, 30)
-            self.label_alert.setText("You have no modules. Contact handin admin to add a module.")
-        self.pushButton.clicked.connect(lambda: self.main_dialog())
+            self.label_alert.setText("An error occurred, please try logging in again")
 
-    
+
     def main_dialog(self):
         global module
         module = self.comboBox_modules.currentText()
@@ -223,7 +922,7 @@ class MainLecturerDialog(QDialog, Ui_Main_Lecturer_Dialog):
     def create_definitions(self):
         dialog = CreateDefinitionsDialog(self)
         dialog.show()
-    
+
     def clone_assignment(self):
         dialog = CloneAssignmentDialog(self)
         dialog.show()
@@ -253,49 +952,64 @@ class ManageStudentMarksDialog(QDialog, Ui_Dialog_Manage_Student_Marks):
         """update table widget - signal"""
         try:
             horizontal_header_labels = ["Student ID"]
-            horizontal_header_labels += get_all_test_items(module,
-                                                           self.comboBox_week.currentText())
-            horizontal_header_labels += ["Attempts Left", "Total Marks"]
-            self.tableWidget.setColumnCount(len(horizontal_header_labels))
-            student_ids = get_all_student_ids(module)
-            self.tableWidget.setRowCount(len(student_ids))
-            self.tableWidget.setHorizontalHeaderLabels(horizontal_header_labels)
+            test_items, error = get_all_test_items(module, self.comboBox_week.currentText())
 
-            # write student ids
-            col = 0
-            for _id in student_ids:
-                self.tableWidget.setItem(col, 0, QTableWidgetItem(_id))
-                col += 1
-            # write attendance, compilation, test1, test2 ....
-            try:
-                for row in range(self.tableWidget.rowCount()):
-                    student_id = self.tableWidget.item(row, 0).text().strip()
-                    vars_filepath = const.get_vars_file_path(module,
-                                                             self.comboBox_week.currentText(), student_id)
-                    with open(vars_filepath, 'r') as stream:
-                        data: dict = yaml.safe_load(stream)
-                    for label in horizontal_header_labels[1:-2]:
-                        if label in data.keys():
-                            self.tableWidget.setItem(row, self.columnFromLabel(label),
-                                                     QTableWidgetItem(str(data[label])))
-            except Exception as e:
-                print(e)
-            # write attempts left and total marks
-            try:
-                for row in range(self.tableWidget.rowCount()):
-                    student_id = self.tableWidget.item(row, 0).text().strip()
-                    vars_filepath = const.get_vars_file_path(module,
-                                                             self.comboBox_week.currentText(), student_id)
-                    with open(vars_filepath, 'r') as stream:
-                        data: dict = yaml.safe_load(stream)
-                    if "attemptsLeft" in data.keys():
-                        self.tableWidget.setItem(row, self.columnFromLabel("Attempts Left"),
-                                                 QTableWidgetItem(str(data["attemptsLeft"])))
-                    if "marks" in data.keys():
-                        self.tableWidget.setItem(row, self.columnFromLabel("Total Marks"),
-                                                 QTableWidgetItem(str(data["marks"])))
-            except Exception as e:
-                print(e)
+            if not error:
+                horizontal_header_labels += test_items
+                horizontal_header_labels += ["Attempts Left", "Total Marks"]
+                self.tableWidget.setColumnCount(len(horizontal_header_labels))
+                student_ids, error1 = get_all_student_ids(module)
+
+                if not error1:
+                    self.tableWidget.setRowCount(len(student_ids))
+                    self.tableWidget.setHorizontalHeaderLabels(horizontal_header_labels)
+
+                    # write student ids
+                    col = 0
+                    for _id in student_ids:
+                        self.tableWidget.setItem(col, 0, QTableWidgetItem(_id))
+                        col += 1
+                    # write attendance, compilation, test1, test2 ....
+                    vars = {}
+                    try:
+                        for row in range(self.tableWidget.rowCount()):
+                            student_id = self.tableWidget.item(row, 0).text().strip()
+                            week_number = self.comboBox_week.currentText()
+                            data, error = get_vars(module, week_number, student_id)
+                            if error:
+                                return
+
+                            vars[(module, week_number, student_id)] = data
+                            for label in horizontal_header_labels[1:-2]:
+                                if label in data.keys():
+                                    self.tableWidget.setItem(row, self.columnFromLabel(label),
+                                                             QTableWidgetItem(str(data[label])))
+                    except Exception as e:
+                        e = format_exc()
+                        print(e)
+                    # write attempts left and total marks
+                    try:
+                        for row in range(self.tableWidget.rowCount()):
+                            student_id = self.tableWidget.item(row, 0).text().strip()
+                            week_number = self.comboBox_week.currentText()
+                            vars_tuple = (module, week_number, student_id)
+                            if not vars_tuple in vars:
+                                data, error = get_vars(module, week_number, student_id)
+                                if error:
+                                    return
+                                vars[vars_tuple] = data
+                            else:
+                                data = vars[vars_tuple]
+                            if "attemptsLeft" in data.keys():
+                                self.tableWidget.setItem(row, self.columnFromLabel("Attempts Left"),
+                                                         QTableWidgetItem(str(data["attemptsLeft"])))
+                            if "marks" in data.keys():
+                                self.tableWidget.setItem(row, self.columnFromLabel("Total Marks"),
+                                                         QTableWidgetItem(str(data["marks"])))
+                    except Exception as e:
+                        e = format_exc()
+                        print(e)
+
         except Exception as e:
             print(e)
             self.tableWidget.clear()
@@ -496,30 +1210,26 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
             tests["test4"] = {"tag": tag, "marks": marks, "command": command, "inputDataFile": inputDataFile,
                               "answerFile": answerFile, "filterFile": filterFile, "filterCommand": filterCommand}
 
-        if not check_if_week_exists(module_code=module_code, week_number=week_number):
-            path = "/module/" + module_code + "/"
-            module_dir = DIR_ROOT + path
-            self.create_week_directory(module_dir, week_number)
-            self.update_params_file(
-                moduleCode=module_code, weekNumber=week_number, startDay=start_day,
-                endDay=end_day, cutoffDay=cutoff_day, penaltyPerDay=penalty_per_day,
-                totalAttempts=total_attempts, collectionFilename=collection_filename, tests=tests)
-        else:
-            create_message_box(f"{week_number} for module {module_code} already exists!")
+        week_exists, error = checkWeekExists(module_code, week_number)
+        if not error:
+            if not week_exists:
+                if self.create_week_directory(module_code, week_number):
+                    self.update_params_file(
+                        moduleCode=module_code, weekNumber=week_number, startDay=start_day,
+                        endDay=end_day, cutoffDay=cutoff_day, penaltyPerDay=penalty_per_day,
+                        totalAttempts=total_attempts, collectionFilename=collection_filename, tests=tests)
+            else:
+                create_message_box(f"{week_number} for module {module_code} already exists!")
 
-    def create_week_directory(self, module_dir, week_number):
-        if not os.path.exists(module_dir + week_number):
-            print(module_dir + week_number)
-            os.mkdir(module_dir + week_number)
-        self.params_path = os.path.join(module_dir + week_number, "params.yaml")
-        if not os.path.exists(self.params_path):
-            with open(self.params_path, "w"):
-                pass
+    def create_week_directory(self, module, week_number):
+        params_path, error = createWeekDirectory(module, week_number)
+        if not error:
+            self.params_path = params_path
+            return True
+        return False
 
     def update_params_file(self, **kwargs):
-        with open(self.params_path, 'a') as file:
-            # TODO: any more params to add??
-            yaml.dump(kwargs, file, default_flow_style=False)
+        updateParamsFile(self.params_path, kwargs)
 
 
 class CreateRepeatAssignmentsDialog(QDialog, Ui_Dialog_Create_Repeat_Assignments):
@@ -717,30 +1427,26 @@ class CreateRepeatAssignmentsDialog(QDialog, Ui_Dialog_Create_Repeat_Assignments
             tests["test4"] = {"tag": tag, "marks": marks, "command": command, "inputDataFile": inputDataFile,
                               "answerFile": answerFile, "filterFile": filterFile, "filterCommand": filterCommand}
 
-        if not check_if_week_exists(module_code=module_code, week_number=week_number):
-            path = "/module/" + module_code + "/"
-            module_dir = DIR_ROOT + path
-            self.create_week_directory(module_dir, week_number)
-            self.update_params_file(
-                moduleCode=module_code, weekNumber=week_number, startDay=start_day,
-                endDay=end_day, cutoffDay=cutoff_day, penaltyPerDay=penalty_per_day,
-                totalAttempts=total_attempts, collectionFilename=collection_filename, tests=tests)
-        else:
-            create_message_box(f"{week_number} for module {module_code} already exists!")
+        week_exists, error = checkWeekExists(module_code, week_number)
+        if not error:
+            if not week_exists:
+                if self.create_week_directory(module_code, week_number):
+                    self.update_params_file(
+                        moduleCode=module_code, weekNumber=week_number, startDay=start_day,
+                        endDay=end_day, cutoffDay=cutoff_day, penaltyPerDay=penalty_per_day,
+                        totalAttempts=total_attempts, collectionFilename=collection_filename, tests=tests)
+            else:
+                create_message_box(f"{week_number} for module {module_code} already exists!")
 
-    def create_week_directory(self, module_dir, week_number):
-        if not os.path.exists(module_dir + week_number):
-            print(module_dir + week_number)
-            os.mkdir(module_dir + week_number)
-        self.params_path = os.path.join(module_dir + week_number, "params.yaml")
-        if not os.path.exists(self.params_path):
-            with open(self.params_path, "w"):
-                pass
+    def create_week_directory(self, module, week_number):
+        params_path, error = createWeekDirectory(module, week_number)
+        if not error:
+            self.params_path = params_path
+            return True
+        return False
 
     def update_params_file(self, **kwargs):
-        with open(self.params_path, 'a') as file:
-            # TODO: any more params to add??
-            yaml.dump(kwargs, file, default_flow_style=False)
+        updateParamsFile(self.params_path, kwargs)
 
 class CreateDefinitionsDialog(QDialog, Ui_Dialog_Create_Definitions):
     def __init__(self, parent=None):
@@ -776,76 +1482,65 @@ class CreateDefinitionsDialog(QDialog, Ui_Dialog_Create_Definitions):
         module_code: str = module
         ay: str = self.lineEdit_academicYear.text().strip()
         # start_semester: str = self.dateEdit_startSemester.text().strip()
-        if not check_if_module_exists(module_code):
-            create_message_box(f"Module instance {module_code} in {ay} doesn't exist!")
-            return
+        module_exists, error = checkModuleExists(module_code)
+        if not error:
+            if not module_exists:
+                create_message_box(f"Module instance {module_code} in {ay} doesn't exist!")
+                return
 
-        defWeek01 = self.dateEdit_startSemester.text().strip()
-        dow = date.fromisoformat(defWeek01).isoweekday()
-        if dow != 1:
-            create_message_box(f"Given 'Monday, Week01' of {defWeek01} is not a Monday.")
-            return
+            defWeek01 = self.dateEdit_startSemester.text().strip()
+            dow = date.fromisoformat(defWeek01).isoweekday()
+            if dow != 1:
+                create_message_box(f"Given 'Monday, Week01' of {defWeek01} is not a Monday.")
+                return
 
-        defOpenDate = self.lineEdit_2.text().strip()
-        defDueDate = self.lineEdit_3.text().strip()
-        defCutoffDate = self.lineEdit_4.text().strip()
+            defOpenDate = self.lineEdit_2.text().strip()
+            defDueDate = self.lineEdit_3.text().strip()
+            defCutoffDate = self.lineEdit_4.text().strip()
 
-        moduleDir = const.modulePath(module_code, ay)
-        self.create_files(moduleDir)
-        self.update_definitions_file(
-            academicYear=ay, # startSemester=start_semester)
-            defWeek01=defWeek01,
-            defOpenDate=defOpenDate,
-            defDueDate=defDueDate,
-            defCutoffDate=defCutoffDate)
-    
+            if self.create_files(module_code, ay):
+                self.update_definitions_file(
+                    academicYear=ay, # startSemester=start_semester)
+                    defWeek01=defWeek01,
+                    defOpenDate=defOpenDate,
+                    defDueDate=defDueDate,
+                    defCutoffDate=defCutoffDate)
+
     def update_definitions_file(self, **kwargs):
-        # TODO: any more defs to add??
-        with open(self.definitions_path, 'a') as file:
-            yaml.dump(kwargs, file, default_flow_style=False)
+        updateDefinitionsFile(self.definitions_path, kwargs)
 
-    def create_files(self, module_dir):
-        """create tmpdir and definitions file"""
-        self.definitions_path = os.path.join(module_dir, "definitions.yaml")
-        if not os.path.exists(self.definitions_path):
-            with open(self.definitions_path, "w"):
-                pass
+    def create_files(self, module, academic_year):
+        definitions_path, error = createDefinitionsFile(module, academic_year)
+        if not error:
+            self.definitions_path = definitions_path
+            return True
+        return False
 
 class CloneAssignmentDialog(QDialog, Ui_Dialog_Clone_Assignment):
     def __init__(self, parent=None):
         super(CloneAssignmentDialog, self).__init__(parent)
         self.setupUi(self)
-        self.comboBox_assignments.addItems(getModuleAssignments("cs4455"))
-        self.pushButton_show.clicked.connect(self.display)
+        assignments, error = getModuleAssignments(module)
+        if not error:
+            self.comboBox_assignments.addItems(assignments)
+            self.pushButton_show.clicked.connect(self.display)
 #        self.comboBox_assignments.currentTextChanged.connect(self.update_table)
-        self.textEdit_showFileContent.setReadOnly(False)
-        self.checkBox_clone.stateChanged.connect(
+            self.textEdit_showFileContent.setReadOnly(False)
+            self.checkBox_clone.stateChanged.connect(
             lambda: self.file_save(self))
 
     def display(self):
-        # filename = "../.handin/cs4455/curr/assignments/w01/params.yaml"
-        ass = self.comboBox_assignments.currentText()
-        filename = os.path.join("../.handin/" + module + "/curr/assignments/" + ass +"/params.yaml")
-        try:
-            with open(filename, 'rb') as f:
-                content = f.read().decode('utf-8')
-        except Exception as e:
-            content = ""
-            print(e)
-        self.textEdit_showFileContent.setText(content)
-        self.submit_filepath = filename
- 
-    def file_save(self, check_box):
-        module_code: str = module
-        assName: str = self.lineEdit_assName.text().strip()
-        newAssPath = os.path.join(ROOTDIR + "/" + module_code + "/curr/assignments/" + assName)
-        os.mkdir(newAssPath)
-        filename = os.path.join(newAssPath + "/params.yaml")
-        file = open(filename, 'w')
-        file.write(self.textEdit_showFileContent.toPlainText())
-        file.close()
+        content, filename, error = getParams(module, self.comboBox_assignments.currentText())
+        if not error:
+            self.textEdit_showFileContent.setText(content)
+            self.submit_filepath = filename
 
-			    
+    def file_save(self, check_box):
+        saveFile(module, self.lineEdit_assName.text().strip())
+
+
+    # TODO cloning may need to be implemented, doesn't seem to be done here
+
     # def clone_assignment(self, check_box):
     #     module_code: str = "cs4455"
     #     #self.lineEdit_moduleCode.text().strip()
@@ -854,18 +1549,19 @@ class CloneAssignmentDialog(QDialog, Ui_Dialog_Clone_Assignment):
     #     if check_if_ass_exists(module_code, "curr", assName):
     #             create_message_box(f"Assignment {assName} instance in {module_code} in {ay} already exists!")
     #             return
-        
+
     #     assClonePath = assPath(module_code, "curr", assClone)
     #     newAssPath = os.path.join(ROOTDIR + "/" + module_code + "/curr/assignments/" + assName)
-        
+
     #     os.mkdir(newAssPath)
-        
+
     #     copyCommand = "cp " + assClonePath + "/params.yaml " + newAssPath
     #     os.system(copyCommand)
-
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     window = MainWindow()
     window.show()
-    sys.exit(app.exec_())
+    exit_code = app.exec_()
+
+    sys.exit(exit_code)

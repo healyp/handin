@@ -1,0 +1,8 @@
+registration_host: '127.0.0.1' # The host for the registration server
+registration_port: 8000 # The port for the registration server
+system_host: '127.0.0.1' # The host for the handin system
+system_port: 8000 # The port for the handin system
+file_server_host: '127.0.0.1' # The host for the handin file server
+file_server_port: 8500 # The port for the handin file server
+file_server_log_level: 10 # log level for the handin file server. see https://docs.python.org/3/library/logging.html for debug level numeric values 20 is INFO and 10 is DEBUG
+response_timeout: 3 # timeout in seconds to wait for a response from the server

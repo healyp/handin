@@ -6,7 +6,7 @@ import yaml
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QDate, QRegExp, QDateTime
 from PyQt5.QtGui import QRegExpValidator
-from PyQt5.QtWidgets import QMainWindow, QDialog, QMessageBox, QLineEdit, QGroupBox, QTableWidgetItem
+from PyQt5.QtWidgets import QMainWindow, QDialog, QMessageBox, QLineEdit, QGroupBox, QTableWidgetItem, QErrorMessage
 
 from ui.impl.create_new_module_dialog import Ui_Dialog as Ui_Dialog_Create_New_Module
 from ui.impl.handin_admin_main_window import Ui_MainWindow as Ui_MainWindow
@@ -24,7 +24,7 @@ def create_message_box(text):
     msgBox.setWindowTitle("Message")
     msgBox.setStandardButtons(QMessageBox.Ok)
     msgBox.exec()
-    
+
 def isMatchRegex(regex: str, text: str) -> bool:
     return bool(re.match(regex, text, re.IGNORECASE))
 
@@ -95,15 +95,28 @@ class CreateUserDialog(QDialog, Ui_Dialog_Create_User):
         super(CreateUserDialog, self).__init__(parent)
         self.setupUi(self)
         self.pushButton_create.clicked.connect(lambda: self.create_user())
-    
+
+    def create_user_folder(self, user):
+        folder_path = ROOTDIR + "/users/" + user
+        if not os.path.isdir(folder_path):
+            try:
+                os.makedirs(folder_path)
+            except OSError as err:
+                error_dialog = QtWidgets.QErrorMessage()
+                error_dialog.showMessage("Failed to create user directory, please try again. Message: " + err)
+                error_dialog.exec()
+
     def create_user(self):
         user = self.lineEdit_username.text().strip()
         password = self.lineEdit_password.text().strip()
         hashed_password = encrypt_password(password)
-        path = "../.handin/login_credentials.txt"
+        #path = "../.handin/login_credentials.txt"
+        path = ROOTDIR + "/login_credentials.txt"
         with open(path, 'a') as f:
             line = user + " " + hashed_password + "\n"
             f.write(line)
+            self.create_user_folder(user)
+
         self.reject
 
 if __name__ == '__main__':

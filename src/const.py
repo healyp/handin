@@ -1,18 +1,89 @@
 import os
 import re
+import logging
 from pathlib import Path
 from datetime import datetime
 
-# Handin System Server Configs
-HOST = '127.0.0.1'
-PORT = 8000
-ADDR = (HOST, PORT)
+import yaml
 
-HANDINHOME = "/Users/ranya/Desktop/handin"
+HANDINHOME = os.getcwd()
+
+if "src" in HANDINHOME:
+    HANDINHOME = HANDINHOME + "/.."
+
 ROOTDIR = HANDINHOME + "/.handin"
 SRCDIR = HANDINHOME + "/src"
 
+CONF = os.path.join(HANDINHOME, "conf.yaml")
+
+with open(CONF, 'r') as stream:
+    data: dict = yaml.safe_load(stream)
+
+# Handin System Server Configs
+HOST = data['system_host']
+PORT = data['system_port']
+ADDR = (HOST, PORT)
+
+RESPONSE_TIMEOUT = data['response_timeout'] # timeout for waiting for a response in seconds
+
+REGISTRATION_HOST = data['registration_host']
+REGISTRATION_PORT = data['registration_port']
+REGISTRATION_ADDR = (REGISTRATION_HOST, REGISTRATION_PORT)
+
+FILE_SERVER_HOST = data['file_server_host']
+FILE_SERVER_PORT = data['file_server_port']
+FILE_ADDR = (FILE_SERVER_HOST, FILE_SERVER_PORT)
+FILE_LOG_LEVEL = data['file_server_log_level']
+
 ModCodeRE = r"^cs\d{4}$"          # UL module code re
+
+class FileServerCommands:
+    AUTHENTICATE_LECTURER = "auth_lecturer"
+    ALERT_MAC_ADDRESS = "alert_mac_address"
+    TRUST_MAC_ADDRESS = "trust_mac_address"
+    GET_LECTURER_MODULES = "get_lecturer_modules"
+    MODULE_INFO = "get_module_info"
+    GET_VARS = "get_vars"
+    CHECK_EXISTS = "check_exists"
+    CREATE_WEEK_DIRECTORY = "create_week_directory"
+    UPDATE_PARAMS_FILE = "update_params_file"
+    CREATE_DEFINITIONS_FILE = "create_definitions_file"
+    UPDATE_DEFINITIONS_FILE = "update_definitions_file"
+    GET_PARAMS = "get_params"
+    FILE_SAVE = "file_save"
+    VALID_COMMANDS = [AUTHENTICATE_LECTURER, ALERT_MAC_ADDRESS, TRUST_MAC_ADDRESS, GET_LECTURER_MODULES, MODULE_INFO
+                     , GET_VARS, CHECK_EXISTS, CREATE_WEEK_DIRECTORY, UPDATE_PARAMS_FILE, CREATE_DEFINITIONS_FILE
+                     , UPDATE_DEFINITIONS_FILE, GET_PARAMS, FILE_SAVE]
+
+    @staticmethod
+    def validateCommand(command):
+        return command in FileServerCommands.VALID_COMMANDS
+
+    class ModuleInfoRequestCodes:
+        CODE = "request_code"
+
+        MODULE_CODES = "module_codes"
+        MODULE_ASSIGNMENTS = "module_assignments"
+        MODULE_TEST_ITEMS = "module_test_items"
+        MODULE_STUDENT_IDS = "module_student_ids"
+        VALID_CODES = [MODULE_CODES, MODULE_ASSIGNMENTS, MODULE_TEST_ITEMS, MODULE_STUDENT_IDS]
+
+        @staticmethod
+        def validateCode(code):
+            return code in FileServerCommands.ModuleInfoRequestCodes.VALID_CODES
+
+    class CheckExistsRequestCodes:
+        CODE = "request_code"
+
+        WEEK_EXISTS = "week_exists"
+        MODULE_EXISTS = "module_exists"
+        ASSIGNMENT_EXISTS = "assignment_exists"
+        VALID_CODES = [WEEK_EXISTS, MODULE_EXISTS, ASSIGNMENT_EXISTS]
+
+        @staticmethod
+        def validateCode(code):
+            return code in FileServerCommands.CheckExistsRequestCodes.VALID_CODES
+
 
 def get_class_list_file_path(module_code):
     return os.path.join(ROOTDIR, module_code, "curr", "class-list")
@@ -43,7 +114,6 @@ def check_if_module_exists(mc: str) -> bool:
         # if module_code.lower() in modules:
         return True
     return False
-
 
 def findStudentId(stuId: str, filePath: str):
     regex = "\\b{}\\b".format(stuId)
