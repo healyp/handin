@@ -195,19 +195,19 @@ class AccessRightsDialog(QDialog, Ui_Dialog_Access_Rights):
                             lecturer_found = True
                             data = ln.split()
                             if module not in data[1:]:
-                                ln = f"{ln} {module}\n"
+                                ln = f"{ln} {module}"
                             else:
                                 error_occurred = True
                                 self.error_message.setText("The lecturer already has access")
                         else:
-                            ln = f"{ln}\n"
-                        f.write(ln)
+                            ln = f"{ln}"
+                        f.write(ln + "\n")
 
                     if not lecturer_found:
                         f.write(f"{lecturer} {module}")
 
                 if not error_occurred:
-                    create_message_box(f"Lecturer {lecturer} given access to module {module}")
+                    create_message_box(f"Lecturer {lecturer} given access to module {module.upper()}")
             except Exception as e:
                 print(e)
                 self.error_message.setText("An error occurred, try again")
@@ -224,7 +224,7 @@ class AccessRightsDialog(QDialog, Ui_Dialog_Access_Rights):
             path = ROOTDIR + "/access_rights.txt"
 
             try:
-                lecturer_found = False
+                module_found = False
                 error_occurred = False
 
                 lines = self.get_current_access_lines()
@@ -232,23 +232,23 @@ class AccessRightsDialog(QDialog, Ui_Dialog_Access_Rights):
                 with open(path, 'w+') as f:
                     for ln in lines:
                         if ln.startswith(lecturer):
-                            lecturer_found = True
                             data = ln.split()
                             ln = f"{lecturer} "
-                            if module in data[1:]:
-                                for m in data[1:]:
-                                    m = m.strip()
-                                    if m != module:
-                                        ln += f"{m} "
-                            else:
+                            for m in data[1:]:
+                                m = m.strip()
+                                if m != module:
+                                    ln += f"{m} "
+                                else:
+                                    module_found = True
+                            if not module_found:
                                 error_occurred = True
                                 self.error_message.setText("The lecturer does not have access")
                         else:
-                            ln = f"{ln}\n"
-                        f.write(ln)
+                            ln = f"{ln}"
+                        f.write(ln + "\n")
 
                 if not error_occurred:
-                    create_message_box(f"Access to module {module} removed from lecturer {lecturer}")
+                    create_message_box(f"Access to module {module.upper()} removed from lecturer {lecturer}")
             except Exception as e:
                 print(e)
                 self.error_message.setText("An error occurred, try again")
