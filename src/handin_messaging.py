@@ -75,10 +75,10 @@ KEY_VALUE_SEPARATOR = ";"
 TIMEOUT_ERROR_MESSAGE = "There has been a timeout while waiting for a response from the file server. This is usually caused after an error on the server occurred or the request took too long (Try increasing response_timeout in conf.yaml). Please try again"
 # string flag to return to indicate that html should be returned
 SEND_HTML = "SEND HTML"
-# the string to look for in a http get request
-HTTP_GET_REQUEST = "GET / HTTP"
-# the string to look for in a http post request
-HTTP_POST_REQUEST = "POST / HTTP"
+# the regex to look for in a http get request
+HTTP_GET_REQUEST = r"GET\s+([^?\s]+)((?:[?&][^&\s]+)*)\s+(HTTP\/.*)"
+# the regex to look for in a http post request
+HTTP_POST_REQUEST = r"POST\s+([^?\s]+)((?:[?&][^&\s]+)*)\s+(HTTP\/.*)"
 # the header to send back with the html page
 HTTP_HEADER = "HTTP/1.1 200 OK\n\n"
 
@@ -89,7 +89,7 @@ def retrieve_input(socket):
     if not input:
         return ""
     else:
-        if HTTP_GET_REQUEST in input or HTTP_POST_REQUEST in input:
+        if re.search(HTTP_GET_REQUEST, input) or re.search(HTTP_POST_REQUEST, input):
             return SEND_HTML
         else:
             while not input.endswith(END_OF_LINE):
