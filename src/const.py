@@ -32,6 +32,7 @@ FILE_SERVER_HOST = data['file_server_host']
 FILE_SERVER_PORT = data['file_server_port']
 FILE_ADDR = (FILE_SERVER_HOST, FILE_SERVER_PORT)
 FILE_LOG_LEVEL = data['file_server_log_level']
+FILE_HTML_LANDING = data['file_html_landing']
 
 ModCodeRE = r"^cs\d{4}$"          # UL module code re
 
@@ -47,11 +48,12 @@ class FileServerCommands:
     UPDATE_PARAMS_FILE = "update_params_file"
     CREATE_DEFINITIONS_FILE = "create_definitions_file"
     UPDATE_DEFINITIONS_FILE = "update_definitions_file"
+    GET_DEFINITIONS_FILE = "get_definitions_file"
     GET_PARAMS = "get_params"
     FILE_SAVE = "file_save"
     VALID_COMMANDS = [AUTHENTICATE_LECTURER, ALERT_MAC_ADDRESS, TRUST_MAC_ADDRESS, GET_LECTURER_MODULES, MODULE_INFO
                      , GET_VARS, CHECK_EXISTS, CREATE_WEEK_DIRECTORY, UPDATE_PARAMS_FILE, CREATE_DEFINITIONS_FILE
-                     , UPDATE_DEFINITIONS_FILE, GET_PARAMS, FILE_SAVE]
+                     , UPDATE_DEFINITIONS_FILE, GET_DEFINITIONS_FILE, GET_PARAMS, FILE_SAVE]
 
     @staticmethod
     def validateCommand(command):

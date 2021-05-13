@@ -777,6 +777,49 @@ def updateDefinitionsFile(request: Request):
         request_ok("UPDATE_DEFINITIONS_FILE")
         respond(request, True, "UPDATE_DEFINITIONS_FILE successful")
 
+def getDefinitionsFile(request: Request):
+    params = request.args
+
+    if 'module' in params:
+        module = params['module']
+
+    if 'academic_year' in params:
+        academic_year = params['academic_year']
+
+    log_message = ""
+    error_message = ""
+    showError = False
+
+    if not module:
+        log_message = "Mandatory module parameter not provided"
+        error_message = "You need to provide a module parameter"
+        showError = True
+    elif not academic_year:
+        log_message = "Mandatory academic_year parameter not provided"
+        error_message = "You need to provide an academic_year parameter"
+        showError = True
+
+    if showError:
+        request_bad("GET_DEFINITIONS_FILE", log_message)
+        respond(request, False, error_message)
+    else:
+        moduleDir = const.modulePath(module, academic_year)
+        definitions_file = os.path.join(moduleDir, "definitions.yaml")
+        if os.path.isfile(definitions_file):
+            logging.debug(f"Opening definitions file {definitions_file}")
+            with open(definitions_file, 'r') as stream:
+                definitions: dict = yaml.safe_load(stream)
+        else:
+            logging.debug(f"The file {definitions_file} doesn't exist")
+            definitions = {}
+
+        response_data = {
+            'definitions': definitions
+        }
+
+        request_ok("GET_DEFINITIONS_FILE")
+        respond(request, True, "GET_DEFINITIONS_FILE successful", response_data)
+
 def getParams(request: Request):
     args = requesta.args
 
@@ -823,7 +866,7 @@ def getParams(request: Request):
         respond(request, True, "GET_PARAMS successful", response_data)
 
 def saveFile(request: Request):
-    # TODO sending a file in a single request may be too big. Consider changing how large text is sent
+    # TODO sending a file in a single request may be too big. Consider changing how large text is sent, maybe in handin_messaging check the size of the string and split it into multiple sendall calls with the final call having DONE at the end
     params = request.args
 
     module = None
@@ -888,6 +931,8 @@ def processCommand(request: Request, command):
         createDefinitionsFile(request)
     elif command == FileServerCommands.UPDATE_DEFINITIONS_FILE:
         updateDefinitionsFile(request)
+    elif command == FileServerCommands.GET_DEFINITIONS_FILE:
+        getDefinitionsFile(request)
     elif command == FileServerCommands.GET_PARAMS:
         getParams(request)
     elif command == FileServerCommands.FILE_SAVE:
@@ -898,7 +943,7 @@ def serveRequest(request: Request, addr):
         try:
             request.receive()
 
-            if not request.disconnected:
+            if not request.disconnected and not request.http_requested:
                 command = request.command
 
                 if not command:
@@ -910,6 +955,9 @@ def serveRequest(request: Request, addr):
                     else:
                         logging.error(f"Command {command} is not valid, sending error response")
                         respond(request, False, f"The command provided: {command} is not valid. Expected: {FileServerCommands.VALID_COMMANDS}")
+            elif request.http_requested:
+                logging.info("Server was accessed with a HTTP request. Information HTML page sent to browser")
+                break
             else:
                 logging.debug(f"{addr} disconnected")
                 break

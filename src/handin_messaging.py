@@ -73,6 +73,14 @@ END_OF_LINE = "DONE"
 KEY_VALUE_SEPARATOR = ";"
 # error message for when timeout error occurs
 TIMEOUT_ERROR_MESSAGE = "There has been a timeout while waiting for a response from the file server. This is usually caused after an error on the server occurred or the request took too long (Try increasing response_timeout in conf.yaml). Please try again"
+# string flag to return to indicate that html should be returned
+SEND_HTML = "SEND HTML"
+# the string to look for in a http get request
+HTTP_GET_REQUEST = "GET / HTTP"
+# the string to look for in a http post request
+HTTP_POST_REQUEST = "POST / HTTP"
+# the header to send back with the html page
+HTTP_HEADER = "HTTP/1.1 200 OK\n\n"
 
 """Waits to retrieve a line of input from the socket until END_OF_LINE is encountered"""
 def retrieve_input(socket):
@@ -81,13 +89,16 @@ def retrieve_input(socket):
     if not input:
         return ""
     else:
-        while not input.endswith(END_OF_LINE):
-            input += socket.recv(1024).decode()
+        if HTTP_GET_REQUEST in input or HTTP_POST_REQUEST in input:
+            return SEND_HTML
+        else:
+            while not input.endswith(END_OF_LINE):
+                input += socket.recv(1024).decode()
 
-            if not input:
-                return ""
+                if not input:
+                    return ""
 
-        input = input[0:input.index(END_OF_LINE)]
+            input = input[0:input.index(END_OF_LINE)]
 
         return input
 
@@ -166,6 +177,7 @@ class Request:
         self.command = command
         self.args = args
         self.disconnected = False
+        self.http_requested = False
         self.error = False
         self.error_message = ""
 
@@ -179,6 +191,14 @@ class Request:
         request += f"{args}{END_OF_LINE}"
         self.socket.sendall(bytes(request, 'utf-8'))
 
+    def __sendHTML(self):
+        self.http_requested = True
+        html = HTTP_HEADER
+        with open(const.FILE_HTML_LANDING, 'r') as file:
+            html += file.read()
+        self.socket.sendall(bytes(html, 'utf-8'))
+        self.socket.close()
+
     """
         This method is to be called by the server to receive and parse a request that was sent with the send() method
         The parsed parameters can be accesed after this call returns using the command and args attributes
@@ -186,6 +206,10 @@ class Request:
     def receive(self):
         try:
             input = retrieve_input(self.socket)
+            if input == SEND_HTML:
+                self.__sendHTML()
+                return
+
             self.disconnected = input == ""
 
             if self.disconnected:
