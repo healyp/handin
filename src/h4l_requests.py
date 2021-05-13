@@ -1,4 +1,5 @@
 import logging
+import sys
 
 from handin_messaging import Request, connectedSocket, MessagingError, request
 import const
