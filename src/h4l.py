@@ -1,7 +1,7 @@
 import re
 import sys
 import logging
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import QDate, QRegExp, QDateTime
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtWidgets import QMainWindow, QDialog, QMessageBox, QLineEdit, QGroupBox, QTableWidgetItem
@@ -336,6 +336,8 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
             lambda: self.add_file_with_check_box(self.checkBox_test4_filterFile, self.label_test4_filterFile,
                                                  is_filter=True, filter_line_edit=self.lineEdit_test4_filterCommand))
 
+        self.weekNumber_comboBox.addItems(["w01", "w02", "w03", "w04", "w05", "w06", "w07", "w07", "w08", "w09", "w10", "w11", "w12", "w13"])
+
         self.lineEdit_test1_filterCommand.setDisabled(True)
         self.lineEdit_test2_filterCommand.setDisabled(True)
         self.lineEdit_test3_filterCommand.setDisabled(True)
@@ -395,6 +397,7 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
     def createOneOffAssignment(self):
         # module_code = self.comboBox_moduleCode.currentText().strip()
         module_code = module
+        week_number = self.weekNumber_comboBox.currentText().strip()
         assName = self.lineEdit_assName.text().strip()
         start_day = self.dateTimeEdit_startDay.text().strip()
         end_day = self.dateTimeEdit_startDay.text().strip()
