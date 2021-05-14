@@ -6,6 +6,7 @@ import signal
 import logging
 import threading
 import file_server_commands
+from file_server_commands.AbstractCommand import AbstractCommand
 from handin_messaging import Request, listenerSocket, acceptSocket, respond
 from traceback import format_exc
 import const
@@ -35,18 +36,38 @@ s = None
 
 commands = {}
 
+"""
+    This method loads the command modules that have been implemented in
+    /src/file_server_commands that follow the rules outlined in /src/file_server_commands/extending_file_server.md.
+    These modules provide the implementations for the requests that this file server can handle
+"""
 def load_file_server_commands():
     path = const.HANDINHOME + "/src/file_server_commands"
-    files = [f for f in os.listdir(path) if f.endswith(".py") and f != "AbstractCommand.py" and f != "__init__.py"]
+    files = [f for f in os.listdir(path) if (f.endswith(".py") or f.endswith(".pyo") or f.endswith(".pyc"))
+             and f != "AbstractCommand.py" and f != "__init__.py"]
 
+    commands_loaded = 0
+    logging.debug(f"Loading commands from {path}")
     for f in files:
-        module_name = f[0:f.index(".py")]
+        extension = os.path.splitext(f)[1]
+        module_name = f[0:f.index(extension)]
         class_name = module_name
         module_name = "file_server_commands." + module_name
         command_class = locate(f"{module_name}.{class_name}")
-        commands[command_class.COMMAND] = command_class()
 
-    logging.debug(f"Loaded {len(files)} commands")
+        if command_class is not None:
+            command_class = command_class()
+            if isinstance(command_class, AbstractCommand):
+                commands[command_class.COMMAND] = command_class
+                commands_loaded += 1
+                logging.debug(f"\t{class_name} from {f} implementing {command_class.COMMAND.upper()}")
+            else:
+                logging.warning(f"Class {class_name} from module {module_name} does not extend AbstractCommand, ignoring..")
+        else:
+            logging.warning(f"File {f} found in src/file_server_commands but did" +
+                            f"not have a class with the name {class_name}, ignoring..")
+
+    logging.debug(f"Loaded {commands_loaded} commands")
 
 def do_kill():
     print("handin_file_server has been terminated")
@@ -142,8 +163,9 @@ def processCommand(request: Request, command):
         command_handler = commands[command]
         command_handler.handleRequest(request)
     else:
-        logging.error(f"Command: {commandUpper} is defined in const.FileServerCommands but the request has not been implemented in the server")
-        respond(request, False, f"Command provided: {commandUpper} is valid, but the server does not have the rquest implemented")
+        logging.error(f"Command: {commandUpper} is defined in const.FileServerCommands but no file in src/file_server_commands implementing "
+                        + "AbstractCommand with attribute COMMAND = FileServerCommands." + commandUpper + " has been found")
+        respond(request, False, f"Command provided: {commandUpper} is valid, but the server does not have the request implemented")
 
 def serveRequest(request: Request, addr):
     while True:

@@ -5,7 +5,7 @@ from handin_messaging import *
 import logging
 from handin_file_server import *
 
-class CheckExistence(AbstractCommand):
+class CheckExists(AbstractCommand):
     COMMAND = FileServerCommands.CHECK_EXISTS
 
     def __init__(self):

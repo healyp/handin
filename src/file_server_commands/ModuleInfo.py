@@ -5,7 +5,7 @@ from handin_messaging import *
 import logging
 from handin_file_server import *
 
-class ProcessModuleInfo(AbstractCommand):
+class ModuleInfo(AbstractCommand):
     COMMAND = FileServerCommands.MODULE_INFO
 
     def __init__(self):

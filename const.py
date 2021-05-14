@@ -41,7 +41,7 @@ class FileServerCommands:
     ALERT_MAC_ADDRESS = "alert_mac_address"
     TRUST_MAC_ADDRESS = "trust_mac_address"
     GET_LECTURER_MODULES = "get_lecturer_modules"
-    MODULE_INFO = "get_module_info"
+    MODULE_INFO = "module_info"
     GET_VARS = "get_vars"
     CHECK_EXISTS = "check_exists"
     CREATE_WEEK_DIRECTORY = "create_week_directory"
