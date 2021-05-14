@@ -125,7 +125,7 @@ def findStudentId(stuId: str, filePath: str):
 
 
 def check_if_week_exists(module_code: str, week_number: str) -> bool:
-    path = ROOTDIR, "/module/", module_code, "/", "assignments/"
+    path = ROOTDIR + module_code + "/assignments/"
     if os.path.exists(path):
         weeks = [name for name in os.listdir(path)]
         if week_number in weeks:

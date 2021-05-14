@@ -402,8 +402,8 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         start_day = self.dateTimeEdit_startDay.text().strip()
         end_day = self.dateTimeEdit_startDay.text().strip()
         cutoff_day = self.dateTimeEdit_cutoffDay.text().strip()
-        # penalty_per_day = int(self.lineEdit_penaltyPerDay.text().strip())
-        # total_attempts = int(self.lineEdit_totalAttempts.text().strip())
+        penalty_per_day = int(self.spinBox_penaltyPerDay.value())
+        total_attempts = int(self.spinBox_totalAttempts.value())
         collection_filename = self.lineEdit_collectFilename.text().strip()
         tests = {}
         if self.groupBox_attendance.isChecked():
@@ -474,7 +474,9 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         return False
 
     def update_params_file(self, **kwargs):
-        updateParamsFile(self.params_path, kwargs)
+        if not updateParamsFile(self.params_path, kwargs):
+            # if this returns false, no error occurred
+            create_message_box(f"Assignment created successfully")
 
 
 class CreateRepeatAssignmentsDialog(QDialog, Ui_Dialog_Create_Repeat_Assignments):

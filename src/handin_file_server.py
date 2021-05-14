@@ -625,11 +625,9 @@ def createWeekDirectory(request: Request):
         request_bad("CREATE_WEEK_DIRECTORY", log_message)
         respond(request, False, error_message)
     else:
-        path = "/module/" + module + "/" # TODO this doesn't look right, should it be .handin/module
-        module_dir = DIR_ROOT + path
-        path = module_dir + week_number
+        path = f"{ROOTDIR}/{module}/curr/assignments/{week_number}"
         if not os.path.exists(path):
-            os.mkdir(path)
+            os.makedirs(path)
             logging.debug(f"Creating directory {path}")
         else:
             logging.debug(f"Path {path} already exists, not creating it")
@@ -637,7 +635,7 @@ def createWeekDirectory(request: Request):
         params_path = os.path.join(path, "params.yaml")
         if not os.path.exists(params_path):
             with open(params_path, "w"):
-                pass # TODO what's whis supposed to do
+                pass
 
         response_data = {
             'params_path': params_path
@@ -897,9 +895,9 @@ def saveFile(request: Request):
     else:
         newAssignmentPath = os.path.join(ROOTDIR + "/" + module + "/curr/assignments/" + assignment)
         logging.debug(f"Creating directory {newAssignmentPath}")
-        os.mkdir(newAssignmentPath)
+        os.makedirs(newAssignmentPath)
         filename = os.path.join(newAssignmentPath + "/params.yaml")
-        logging.debug(f"Creating file filename")
+        logging.debug(f"Creating file {filename}")
         file = open(filename, 'w')
         file.write(self.textEdit_showFileContent.toPlainText())
         file.close()
