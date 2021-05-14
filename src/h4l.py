@@ -829,7 +829,6 @@ class CloneAssignmentDialog(QDialog, Ui_Dialog_Clone_Assignment):
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     window = MainWindow()
-    window.show()
+    window.show();
     exit_code = app.exec_()
-
     sys.exit(exit_code)
