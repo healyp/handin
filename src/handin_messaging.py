@@ -68,7 +68,7 @@ import const
 # Separator for all components of a request/response line
 SEPARATOR = "&amp"
 # Marks the end of a request/response line
-END_OF_LINE = "DONE"
+END_OF_LINE = "e%%o%%l%%&&"
 # Separator for key=value pairs
 KEY_VALUE_SEPARATOR = ";"
 # error message for when timeout error occurs
