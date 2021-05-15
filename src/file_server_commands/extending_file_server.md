@@ -32,7 +32,7 @@ above
   `from handin_file_server import *`
   If you need more variables from const (or all), add them to the const import or replace with *
 3. Create a class with the same name as the file and without the .py extension and have it extend AbstractCommand
-4. Specify a COMMAND attribute with it equalling the const.FileServerCommands value. If it is a new command, you will need to define it. e.g.:
+4. Specify a COMMAND attribute with it equalling the const.FileServerCommands value. If it is a new command, you will need to define it in const.FileServerCommands and add the const to the VALID_COMMANDS list. e.g.:
   `COMMAND = FileServerCommands.AUTHENTICATE_LECTURER`
 5. Create the constructor which just calls `super().__init__()` with no parameters
 6. Create the handleRequest method which will handle and respond to the request

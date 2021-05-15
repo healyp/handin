@@ -37,7 +37,7 @@ FILE_HTML_LANDING = data['file_html_landing']
 ModCodeRE = r"^cs\d{4}$"          # UL module code re
 
 class FileServerCommands:
-    AUTHENTICATE_LECTURER = "auth_lecturer"
+    AUTHENTICATE_LECTURER = "authenticate_lecturer"
     ALERT_MAC_ADDRESS = "alert_mac_address"
     TRUST_MAC_ADDRESS = "trust_mac_address"
     GET_LECTURER_MODULES = "get_lecturer_modules"

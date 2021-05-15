@@ -34,6 +34,12 @@ logging.basicConfig(filename=logfile, level=const.FILE_LOG_LEVEL, format='%(leve
 
 s = None
 
+class CommandNotImplementedError(Exception):
+    pass
+
+class CommandNotRecognisedError(Exception):
+    pass
+
 commands = {}
 
 """
@@ -58,7 +64,9 @@ def load_file_server_commands():
         if command_class is not None:
             command_class = command_class()
             if isinstance(command_class, AbstractCommand):
-                commands[command_class.COMMAND] = command_class
+                command = command_class.COMMAND
+                validate_command(class_name, command)
+                commands[command] = command_class
                 commands_loaded += 1
                 logging.debug(f"\t{class_name} from {f} implementing {command_class.COMMAND.upper()}")
             else:
@@ -67,7 +75,23 @@ def load_file_server_commands():
             logging.warning(f"File {f} found in src/file_server_commands but did" +
                             f"not have a class with the name {class_name}, ignoring..")
 
-    logging.debug(f"Loaded {commands_loaded} commands")
+    validate_command_implementation()
+    logging.info(f"Loaded {commands_loaded} commands from {path}")
+
+def validate_command(class_name, command):
+    if not FileServerCommands.validateCommand(command):
+        commandUpper = command.upper()
+        raise CommandNotRecognisedError(f"{class_name} implements {commandUpper} but it is not defined in FileServerCommands nor FileServerCommands.VALID_COMMANDS")
+
+"""
+    Validates that all commands in FileServerCommands.VALID_COMMANDS has an implementation
+"""
+def validate_command_implementation():
+    for command in FileServerCommands.VALID_COMMANDS:
+        if not command in commands:
+            raise CommandNotImplementedError(f"Command {command.upper()} defined in FileServerCommands "
+                    + "but no class implementing the handleRequest for it has been found in src/file_server_commands")
+
 
 def do_kill():
     print("handin_file_server has been terminated")
