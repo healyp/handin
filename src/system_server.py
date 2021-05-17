@@ -13,6 +13,11 @@ import const
 host = const.HOST
 port = const.PORT
 
+"""
+    TODO Ask Paddy if system_server will be run on the same computer that .handin is stored in.
+    Or is there a possibility the file_server (i.e. where .handin is) will be on a different machine and need to send/receive
+    requests and responses to the file_server
+""" 
 
 def get_file_content(path, mode='r'):
     with open(path, mode=mode, encoding='utf-8') as f:
