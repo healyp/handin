@@ -66,11 +66,11 @@ import const
 """
 
 # Separator for all components of a request/response line
-SEPARATOR = "&amp"
+SEPARATOR = "&%%a%%m%%p&"
 # Marks the end of a request/response line
 END_OF_LINE = "e%%o%%l%%&&"
 # Separator for key=value pairs
-KEY_VALUE_SEPARATOR = ";"
+KEY_VALUE_SEPARATOR = "key%%&val%%&ue%%&"
 # error message for when timeout error occurs
 TIMEOUT_ERROR_MESSAGE = "There has been a timeout while waiting for a response from the file server. This is usually caused after an error on the server occurred or the request took too long (Try increasing response_timeout in conf.yaml). Please try again"
 # string flag to return to indicate that html should be returned
@@ -112,13 +112,9 @@ def parse_key_value_pairs(string, dict):
     splitArgs = string.split(KEY_VALUE_SEPARATOR)
     for i in splitArgs:
         if i != "":
-            PATTERN = re.compile(r'''((?:[^="']|"[^"]*"|'[^']*')+)''') # this regex iensures that we don't split on = inside in quotation marks
-            param = PATTERN.split(i)[1::2]
-            key = param[0].strip()
-            value = ""
-            if len(param) > 1:
-                value = param[1].strip()
-
+            equalsIndex = i.index("=")
+            key = i[0:equalsIndex]
+            value = i[equalsIndex+1:]
             if value.startswith("[") and value.endswith("]"):
                 # we have a list
                 value = parse_string_to_list(value)

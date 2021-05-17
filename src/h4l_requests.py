@@ -1,5 +1,6 @@
 import logging
 import sys
+import os
 
 from handin_messaging import Request, connectedSocket, MessagingError, request
 import const
@@ -817,6 +818,64 @@ def saveFile(module, assignment):
                 error = True
                 if request.error:
                     logging.error(f"Request Error: {request.error_message}")
+        else:
+            error = True
+    except (MessagingError) as m:
+        s = None
+        doError(f"{m}")
+        error = True
+
+    return error
+
+def readFileContents(file):
+    error = False
+    contents = ""
+
+    if os.path.isdir(file):
+        doError(f"{file} is a directory")
+        error = True
+    else:
+        try:
+            contents = ""
+            with open(file, 'r') as file1:
+                contents = file1.read()
+        except (FileNotFoundError):
+            doError(f"{file} does not exist")
+            error = True
+
+    return contents, error
+
+def uploadFile(file, destination_path):
+    global s
+    try:
+        if setSocket():
+            contents, error = readFileContents(file)
+
+            if not error:
+                args = {
+                    'contents': contents,
+                    'destination': destination_path
+                }
+
+                response = request(Request(s, FileServerCommands.UPLOAD_FILE, args))
+
+                if response is not None:
+                    if not response.disconnected:
+                        if response.success == "True":
+                            return False
+                        else:
+                            error = True
+                            doError(f"{response.message}")
+                    else:
+                        s = None
+                        error = True
+                        if response.error:
+                            logging.error(f"Response Error: {response.error_message}")
+                else:
+                    s = None
+                    error = True
+                    if request.error:
+                        logging.error(f"Request Error: {request.error_message}")
         else:
             error = True
     except (MessagingError) as m:

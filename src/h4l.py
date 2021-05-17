@@ -24,7 +24,7 @@ from ui.impl.pick_module_dialog import Ui_Dialog as Ui_Dialog_pick_module
 from datetime import date
 
 import const
-from const import whatAY, containsValidDay
+from const import whatAY, containsValidDay, getFileNameFromPath
 
 from h4l_requests import *
 
@@ -256,6 +256,42 @@ class ManageStudentMarksDialog(QDialog, Ui_Dialog_Manage_Student_Marks):
             print(e)
             self.tableWidget.clear()
 
+def upload_test_files(params_path, data):
+    """map all tests paths to the path that will be stored on the server and upload the files"""
+    fileKeys = ['inputDataFile', 'answerFile', 'filterFile']
+    tests = data['tests']
+    for key in tests:
+        var = tests[key]
+        for file in fileKeys:
+            if file in var:
+                file_path = var[file]
+                if file_path != "":
+                    server_directory_full, server_directory_relative, server_file_name = map_tests_path(params_path, key, file_path, file)
+                    var[file] = server_directory_full + "/" + server_file_name
+                    upload_path = server_directory_relative + "/" + server_file_name
+                    if uploadFile(file_path, upload_path):
+                        create_message_box(f"An error occurred uploading file {file_path} to server, try again")
+                        return False
+
+    return True
+
+def map_tests_path(params_path, test_name, path, file):
+    """
+        Map path variable to the path of the file that will be stored on the server.
+        The directory name of params_path is used as the directory with everything before the module code stripped off.
+        The filename is then created as {test_name}-{file}{extension} where file is the key in the yaml storing the path to the file,
+        e.g this method would return for an input file /local/path/to/fileinput.txt and for module cs4123 w01 and test1 and inputDataFile:
+            server_directory_full = /path/on/server/to/cs4123/curr/assignments/w01/ this is what will be stored in the yaml file
+            server_directory_relative = /cs4123/curr/assignments/w01/ this is used to upload the file relative to .handin
+            server_file_name = test1-inputDataFile.txt
+    """
+    file_name = getFileNameFromPath(path)
+    extension = os.path.splitext(file_name)[1]
+    server_directory = os.path.dirname(params_path)
+    server_directory_full = server_directory
+    server_directory_relative = server_directory[server_directory.index("/.handin") + len("/.handin"):]
+    server_file_name = f"{test_name}-{file}{extension}"
+    return server_directory_full, server_directory_relative, server_file_name
 
 class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
     def __init__(self, parent=None):
@@ -402,8 +438,8 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         start_day = self.dateTimeEdit_startDay.text().strip()
         end_day = self.dateTimeEdit_startDay.text().strip()
         cutoff_day = self.dateTimeEdit_cutoffDay.text().strip()
-        # penalty_per_day = int(self.lineEdit_penaltyPerDay.text().strip())
-        # total_attempts = int(self.lineEdit_totalAttempts.text().strip())
+        penalty_per_day = int(self.spinBox_penaltyPerDay.value())
+        total_attempts = int(self.spinBox_totalAttempts.value())
         collection_filename = self.lineEdit_collectFilename.text().strip()
         tests = {}
         if self.groupBox_attendance.isChecked():
@@ -474,8 +510,10 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         return False
 
     def update_params_file(self, **kwargs):
-        updateParamsFile(self.params_path, kwargs)
-
+        if (upload_test_files(self.params_path, kwargs)):
+            if not updateParamsFile(self.params_path, kwargs):
+                # if this returns false, no error occurred
+                create_message_box(f"Assignment created successfully")
 
 class CreateRepeatAssignmentsDialog(QDialog, Ui_Dialog_Create_Repeat_Assignments):
     def __init__(self, parent=None):
@@ -691,7 +729,10 @@ class CreateRepeatAssignmentsDialog(QDialog, Ui_Dialog_Create_Repeat_Assignments
         return False
 
     def update_params_file(self, **kwargs):
-        updateParamsFile(self.params_path, kwargs)
+        if (upload_test_files(self.params_path, kwargs)):
+            if not updateParamsFile(self.params_path, kwargs):
+                # if this returns false, no error occurred
+                create_message_box(f"Assignment created successfully")
 
 class CreateDefinitionsDialog(QDialog, Ui_Dialog_Create_Definitions):
     def __init__(self, parent=None):
@@ -827,7 +868,6 @@ class CloneAssignmentDialog(QDialog, Ui_Dialog_Clone_Assignment):
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     window = MainWindow()
-    window.show()
+    window.show();
     exit_code = app.exec_()
-
     sys.exit(exit_code)
