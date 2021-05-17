@@ -1,14 +1,17 @@
 import os
 import socket
+import signal
 import string
 import threading
 import time
+import sys
 from datetime import datetime
 from subprocess import Popen, PIPE
 import shutil
 import yaml
 
 import const
+from const import send_message, recv_message
 
 host = const.HOST
 port = const.PORT
@@ -17,7 +20,7 @@ port = const.PORT
     TODO Ask Paddy if system_server will be run on the same computer that .handin is stored in.
     Or is there a possibility the file_server (i.e. where .handin is) will be on a different machine and need to send/receive
     requests and responses to the file_server
-""" 
+"""
 
 def get_file_content(path, mode='r'):
     with open(path, mode=mode, encoding='utf-8') as f:
@@ -89,7 +92,7 @@ def get_required_code_filename(module_code, week_number) -> str:
 
 
 def RetrCommand(name, sock: socket.socket):
-    msg = sock.recv(1024).decode()
+    msg = recv_message(sock)
     print("Received command \"%s\"" % msg)
 
     if msg == "Authentication":
@@ -128,98 +131,102 @@ def RetrCommand(name, sock: socket.socket):
 
 def authentication_of_student(name, sock):
     """check if student_id exist in the class list"""
-    sock.sendall(b"OK")
+    send_message("OK", sock)
     # get current module code
-    module_code = sock.recv(1024).decode()
+    module_code = recv_message(sock)
     # get student id
-    student_id = sock.recv(1024).decode()
+    student_id = recv_message(sock)
     class_list_file_path = const.get_class_list_file_path(module_code=module_code.lower())
     if os.path.exists(class_list_file_path):
         with open(class_list_file_path, 'r') as f:
             for line in f:
                 if student_id in line:
-                    sock.sendall(b"True")
+                    send_message("True", sock)
                     print(student_id + " has been authenticated ...")
                     RetrCommand(name, sock)
                     return
-    sock.sendall(b"False")
+    send_message("False", sock)
     RetrCommand(name, sock)
 
 
 def checkAttemptsLeft(name, sock):
     """check number of attempts left"""
-    sock.sendall(b"OK")
-    module_code = sock.recv(1024).decode()
-    student_id = sock.recv(1024).decode()
-    week_number = sock.recv(1024).decode()
+    send_message("OK", sock)
+    module_code = recv_message(sock)
+    student_id = recv_message(sock)
+    week_number = recv_message(sock)
     # read vars.yaml file to get attemptsLeft value
     vars_filepath = const.get_vars_file_path(module_code, week_number, student_id)
     with open(vars_filepath, 'r') as stream:
         data: dict = yaml.safe_load(stream)
     if data.get("attemptsLeft"):
-        sock.sendall(str(data.get("attemptsLeft")).encode('utf-8'))
+        send_message(str(data.get("attemptsLeft")), sock)
     else:
-        sock.sendall(b"False")
+        send_message("False", sock)
         print("ERROR: attemptsLeft doesn't exist!!!")
     RetrCommand(name, sock)
 
 
 def checkIfModuleExists(name, sock):
     """check if the moduleCode exists"""
-    sock.sendall(b"OK")
-    module_code = sock.recv(1024).decode()
-    path = const.DIR_ROOT + "/module/"
+    send_message("OK", sock)
+    module_code = recv_message(sock)
+    path = const.ROOTDIR
     if os.path.exists(path):
         modules = [name.lower() for name in os.listdir(path)]
         if module_code.lower() in modules:
-            sock.sendall(b"True")
+            send_message("True", sock)
         else:
-            sock.sendall(b"False")
+            send_message("False", sock)
     else:
-        sock.sendall(b"False")
+        send_message("False", sock)
     RetrCommand(name, sock)
 
 
 def checkIfAssignmentWeek(name, sock):
     """check if an assignment week"""
-    sock.sendall(b"OK")
-    module_code = sock.recv(1024).decode()
-    week_number = sock.recv(1024).decode()
-    path = const.DIR_ROOT + "/module/" + module_code + "/"
+    send_message("OK", sock)
+    module_code = recv_message(sock)
+    week_number = recv_message(sock)
+    path = const.ROOTDIR + "/" + module_code + "/curr/assignments/"
     if os.path.exists(path):
         weeks = [name for name in os.listdir(path)]
         if week_number in weeks:
-            sock.sendall(b"True")
+            send_message("True", sock)
         else:
-            sock.sendall(b"False")
+            send_message("False", sock)
     else:
-        sock.sendall(b"False")
+        send_message("False", sock)
     RetrCommand(name, sock)
 
 
 def createVarsFile(name, sock):
     """Create vars file for a specific student"""
-    sock.sendall(b"OK")
-    module_code = sock.recv(1024).decode()
-    student_id = sock.recv(1024).decode()
-    week_number = sock.recv(1024).decode()
+    send_message("OK", sock)
+    module_code = recv_message(sock)
+    student_id = recv_message(sock)
+    week_number = recv_message(sock)
     vars_filepath = const.get_vars_file_path(module_code, week_number, student_id)
+    vars_directory = os.path.dirname(vars_filepath)
+    if not os.path.isdir(vars_directory):
+        os.makedirs(vars_directory)
+
     if not os.path.exists(vars_filepath):
         with open(vars_filepath, 'w'):
             pass
-        sock.sendall(b"Success")
+        send_message("Success", sock)
         RetrCommand(name, sock)
         return
-    sock.sendall(b"Failed")
+    send_message("Failed", sock)
     RetrCommand(name, sock)
 
 
 def initVarsFile(name, sock):
     """init vars.yaml file"""
-    sock.sendall(b"OK")
-    module_code = sock.recv(1024).decode()
-    student_id = sock.recv(1024).decode()
-    week_number = sock.recv(1024).decode()
+    send_message("OK", sock)
+    module_code = recv_message(sock)
+    student_id = recv_message(sock)
+    week_number = recv_message(sock)
     vars_filepath = const.get_vars_file_path(module_code, week_number, student_id)
     data = {
         "attemptsLeft": get_total_attempts(module_code, week_number),
@@ -232,91 +239,94 @@ def initVarsFile(name, sock):
 
 def checkLatePenalty(name, sock):
     """Get late penalty"""
-    sock.sendall(b"OK")
-    module_code = sock.recv(1024).decode()
-    week_number = sock.recv(1024).decode()
+    send_message("OK", sock)
+    module_code = recv_message(sock)
+    week_number = recv_message(sock)
 
     penalty_per_day: str = getPenaltyPerDay(module_code, week_number)
     if penalty_per_day == "False":
-        sock.sendall(b"ERROR: penaltyPerDay doesn't exist!!!")
+        send_message("ERROR: penaltyPerDay doesn't exist!!!", sock)
 
     start_day: str = getStartDay(module_code, week_number)
     if start_day == "False":
-        sock.sendall(b"ERROR: startDay doesn't exist!!!")
+        send_message("ERROR: startDay doesn't exist!!!", sock)
 
     end_day: str = getEndDay(module_code, week_number)
     if end_day == "False":
-        sock.sendall(b"ERROR: endDay doesn't exist!!!")
+        send_message("ERROR: endDay doesn't exist!!!", sock)
 
     cutoff_day: str = getCutoffDay(module_code, week_number)
     if cutoff_day == "False":
-        sock.sendall(b"ERROR: cutoffDay doesn't exist!!!")
+        send_message("ERROR: cutoffDay doesn't exist!!!", sock)
 
-    dt_format = "%d/%m/%Y %H:%M"
+    dt_format = "%Y-%m-%d %H:%M"
     start_day: datetime = datetime.strptime(start_day, dt_format)
     end_day: datetime = datetime.strptime(end_day, dt_format)
     cutoff_day: datetime = datetime.strptime(cutoff_day, dt_format)
     now: datetime = datetime.now()
     if now < start_day:
-        sock.sendall(b"Submission to early!")
+        send_message("Submission too early!", sock)
     elif now > cutoff_day:
-        sock.sendall(b"You have missed the cutoff day, you are not allow to submit now!")
+        send_message("You have missed the cutoff day, you are not allowed to submit now!", sock)
     elif start_day < now < end_day:
         # no late penalty applied
-        sock.sendall(b"0")
+        send_message("0", sock)
     elif end_day < now < cutoff_day:
         hours_delta = (now - end_day).seconds // 3600
-        sock.sendall(str((hours_delta // 24 + 1) * penalty_per_day).encode('utf-8'))
+        send_message(str((hours_delta // 24 + 1) * penalty_per_day), sock)
     RetrCommand(name, sock)
 
 
 def checkCollectionFilename(name, sock):
     """check if the submitted filename matches the required filename"""
-    sock.sendall(b"OK")
-    filename = sock.recv(1024).decode()
-    module_code = sock.recv(1024).decode()
-    week_number = sock.recv(1024).decode()
+    send_message("OK", sock)
+    filename = recv_message(sock)
+    module_code = recv_message(sock)
+    week_number = recv_message(sock)
 
     params_filepath = const.get_params_file_path(module_code, week_number)
     with open(params_filepath, 'r') as stream:
         data = yaml.safe_load(stream)
     if data.get("collectionFilename") and str(data.get("collectionFilename")) == filename:
-        sock.sendall(b"True")
+        send_message("True", sock)
     else:
-        sock.sendall((str(data.get("collectionFilename")) + " is required!").encode('utf-8'))
+        send_message(str(data.get("collectionFilename")) + " is required!", sock)
     RetrCommand(name, sock)
 
 
 def sendFileToServer(name, sock):
     """Copy code file to server side"""
-    sock.sendall(b"OK")
-    module_code = sock.recv(1024).decode()
-    week_number = sock.recv(1024).decode()
-    student_id = sock.recv(1024).decode()
-    filepath = sock.recv(1024).decode()
+    send_message("OK", sock)
+    module_code = recv_message(sock)
+    week_number = recv_message(sock)
+    student_id = recv_message(sock)
+    filepath = recv_message(sock)
     filename = os.path.basename(filepath)
     path = const.get_program_file_path(module_code, week_number, student_id, filename)
-    sock.sendall(b"Start sending")
+    path_directory = os.path.dirname(path)
+    if not os.path.isdir(path_directory):
+        os.makedirs(path_directory)
+    send_message("Start sending", sock)
     with open(path, 'wb') as f:
         while True:
-            data = sock.recv(1024)
-            if data.decode().endswith("DONE"):
-                content, done_str = data.decode().split("DONE")
+            data = recv_message(sock)
+            if data.endswith("DONE"):
+                content, done_str = data.split("DONE")
                 f.write(str(content).encode())
                 break
             f.write(data)
-    sock.sendall(b"End sending")
+    send_message("End sending", sock)
     RetrCommand(name, sock)
 
 
 def getExecResult(name, sock):
     """Exec the program and get exec result"""
-    sock.sendall(b"OK")
-    module_code = sock.recv(1024).decode()
-    week_number = sock.recv(1024).decode()
-    student_id = sock.recv(1024).decode()
-    file_suffix = sock.recv(1024).decode()
-    penalty = sock.recv(1024).decode()
+    send_message("OK", sock)
+    module_code = recv_message(sock)
+    week_number = recv_message(sock)
+    student_id = recv_message(sock)
+    file_suffix = recv_message(sock)
+    penalty = recv_message(sock)
 
     if file_suffix == "cc" or file_suffix == "cpp":
         lang = "c++"
@@ -452,7 +462,7 @@ def getExecResult(name, sock):
     else:
         result_msg = "Sorry, you have no attempts left for this assignment!"
 
-    sock.sendall(result_msg.encode())
+    send_message(result_msg, sock)
     RetrCommand(name, sock)
 
 
@@ -464,11 +474,15 @@ def compare_output_with_answer(output: str, answer: str) -> bool:
 def replace_whitespace_with_underscore(text: str) -> str:
     return text.replace(' ', '_').replace('\r', '_').replace('\n', '_')
 
+def signal_handler(sig, frame, sock):
+    sock.close()
+    sys.exit(0)
 
 if __name__ == '__main__':
     s = socket.socket()
     s.bind((host, port))
     s.listen(5)
+    signal.signal(signal.SIGINT, lambda sig, frame: signal_handler(sig, frame, s))
     print("Server started ...")
     while True:
         c, addr = s.accept()

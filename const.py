@@ -5,6 +5,8 @@ from datetime import datetime
 import yaml
 from pathlib import Path
 
+import struct
+
 HANDINHOME = os.getcwd()
 
 if "src" in HANDINHOME:
@@ -100,7 +102,7 @@ def get_params_file_path(module_code, week_number):
 
 
 def get_vars_file_path(module_code, week_number, student_id):
-    return os.path.join(ROOTDIR, module_code, "curr", student_id, week_number, "vars.yaml")
+    return os.path.join(ROOTDIR, module_code, "curr", "data", student_id, week_number, "vars.yaml")
 
 
 def get_program_file_path(module_code, week_number, student_id, filename_code):
@@ -180,3 +182,28 @@ def assPath(module_code: str, ay: str, ass: str):
 
 def getFileNameFromPath(path):
     return Path(path).name
+
+def send_message(msg, sock):
+    msg = struct.pack('>I', len(msg)) + bytes(msg, 'utf-8')
+    sock.sendall(msg)
+
+def recv_message(sock):
+    raw_msglen = recvall(sock, 4)
+    if not raw_msglen:
+        return None
+    msglen = struct.unpack('>I', raw_msglen)[0]
+    raw_data = recvall(sock, msglen)
+    if not raw_data:
+        return ""
+    else:
+        return raw_data.decode()
+
+def recvall(sock, n):
+    data = bytearray()
+    while len(data) < n:
+        bytes_to_read = n - len(data)
+        packet = sock.recv(bytes_to_read)
+        if not packet:
+            return None
+        data.extend(packet)
+    return data
