@@ -47,7 +47,7 @@ class UpdateParamsFile(AbstractCommand):
                 with open(params_file, 'w') as file:
                     pass
 
-            with open(params_file, 'a') as file:
+            with open(params_file, 'w') as file: # TODO make sure w instead of a is ok
                 # TODO: any more params to add??
                 yaml.dump(params, file, default_flow_style=False)
 

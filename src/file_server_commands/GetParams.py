@@ -12,7 +12,7 @@ class GetParams(AbstractCommand):
         super().__init__()
 
     def handleRequest(self, request: Request):
-        args = requesta.args
+        args = request.args
 
         module = None
         assignment = None
@@ -21,11 +21,11 @@ class GetParams(AbstractCommand):
         error_message = ""
         showError = False
 
-        if 'module' in params:
-            module = params['module']
+        if 'module' in args:
+            module = args['module']
 
-        if 'assignment' in params:
-            assignment = params['assignment']
+        if 'assignment' in args:
+            assignment = args['assignment']
 
         if not module:
             log_message = "Mandatory module parameter not provided"
@@ -40,7 +40,7 @@ class GetParams(AbstractCommand):
             request_bad("GET_PARAMS", log_message)
             respond(request, False, error_message)
         else:
-            filename = os.path.join(ROOTDIR + module + "/curr/assignments/" + assignment +"/params.yaml")
+            filename = os.path.join(ROOTDIR + "/" + module + "/curr/assignments/" + assignment + "/params.yaml")
             logging.debug(f"Reading file {filename}")
             try:
                 with open(filename, 'rb') as f:

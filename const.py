@@ -3,6 +3,7 @@ import re
 from datetime import datetime
 
 import yaml
+from pathlib import Path
 
 HANDINHOME = os.getcwd()
 
@@ -176,3 +177,6 @@ def modulePath(module_code: str, ay: str):
 
 def assPath(module_code: str, ay: str, ass: str):
     return "{}/{}/{}/{}/{}".format(ROOTDIR, module_code.lower(), ay, "assignments", ass)
+
+def getFileNameFromPath(path):
+    return Path(path).name

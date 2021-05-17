@@ -36,7 +36,7 @@ above
   `COMMAND = FileServerCommands.AUTHENTICATE_LECTURER`
 5. Create the constructor which just calls `super().__init__()` with no parameters
 6. Create the handleRequest method which will handle and respond to the request
-7. Now with the constant defined in const.FileServerCommands and the COMMAND attribute (be careful not to miss these as the server will ignore the file if not extending AbstractCommand or python will throw an error if COMMAND is not defined), when the server is launched, it will automatically (handin_file_server.log in debug mode should have the class included in the list of commands loaded)
+7. Now with the constant defined in const.FileServerCommands and the COMMAND attribute (be careful not to miss these as the server will ignore the file if not extending AbstractCommand or python will throw an error if COMMAND is not defined), when the server is launched, it will automatically (handin_file_server.log in debug mode should have the class included in the list of commands loaded) load in all the defined commands and when the server receives a request with a Command matching a loaded file, it will call its handleRequest method and pass in the received Request.
 
 ## File Template
 This is a template of a file implementing the command. Note, FileName.py where FileName is the name of the file and subsequently class and COMMAND_NAME is the name of the constant identifying the command in const.py

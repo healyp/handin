@@ -66,7 +66,7 @@ import const
 """
 
 # Separator for all components of a request/response line
-SEPARATOR = "&amp"
+SEPARATOR = "&%%a%%m%%p&"
 # Marks the end of a request/response line
 END_OF_LINE = "e%%o%%l%%&&"
 # Separator for key=value pairs

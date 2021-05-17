@@ -223,8 +223,8 @@ def serveRequest(request: Request, addr):
 
 if __name__ == "__main__":
     logging.info(f"Starting handin_file_server on host {const.FILE_SERVER_HOST} and port {const.FILE_SERVER_PORT}")
-    load_file_server_commands()
     print(f"Starting handin_file_server on host {const.FILE_SERVER_HOST} and port {const.FILE_SERVER_PORT}")
+    load_file_server_commands()
     signal.signal(signal.SIGINT, signal_handler)
     s = listenerSocket(const.FILE_ADDR)
 
