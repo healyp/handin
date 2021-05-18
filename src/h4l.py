@@ -283,7 +283,7 @@ def map_tests_path(params_path, test_name, path, file):
         e.g this method would return for an input file /local/path/to/fileinput.txt and for module cs4123 w01 and test1 and inputDataFile:
             server_directory_full = /path/on/server/to/cs4123/curr/assignments/w01/ this is what will be stored in the yaml file
             server_directory_relative = /cs4123/curr/assignments/w01/ this is used to upload the file relative to .handin
-            server_file_name = test1-inputDataFile.txt
+            server_file_name = inputfile.txt
     """
     file_name = getFileNameFromPath(path)
     extension = os.path.splitext(file_name)[1]
@@ -436,7 +436,7 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         week_number = self.weekNumber_comboBox.currentText().strip()
         assName = self.lineEdit_assName.text().strip()
         start_day = self.dateTimeEdit_startDay.text().strip()
-        end_day = self.dateTimeEdit_startDay.text().strip()
+        end_day = self.dateTimeEdit_endDay.text().strip()
         cutoff_day = self.dateTimeEdit_cutoffDay.text().strip()
         penalty_per_day = int(self.spinBox_penaltyPerDay.value())
         total_attempts = int(self.spinBox_totalAttempts.value())
@@ -655,7 +655,7 @@ class CreateRepeatAssignmentsDialog(QDialog, Ui_Dialog_Create_Repeat_Assignments
         module_code = module
         week_number = self.comboBox_weekNumber.currentText().strip()
         start_day = self.dateTimeEdit_startDay.text().strip()
-        end_day = self.dateTimeEdit_startDay.text().strip()
+        end_day = self.dateTimeEdit_endDay.text().strip()
         cutoff_day = self.dateTimeEdit_cutoffDay.text().strip()
         penalty_per_day = int(self.lineEdit_penaltyPerDay.text().strip())
         total_attempts = int(self.lineEdit_totalAttempts.text().strip())

@@ -187,6 +187,17 @@ class RequestHandler(BaseHTTPRequestHandler):
     def classListExists(self, mc):
         return os.path.exists(os.path.join(const.ROOTDIR, mc, "curr", "class-list"))
 
+    def getModuleName(self, module_code):
+        path = const.ROOTDIR + "/" + module_code + "/name.txt"
+
+        if not os.path.isfile(path):
+            return "Not Defined"
+        else:
+            with open(path, 'r') as f:
+                name = f.readline().strip()
+
+            return name
+
     def create_handin_file(self, modpath, modcode, student_id, student_name):
         # create /temp/ file directory if not exists
         tmpdir = os.path.join(modpath, "tmp")
@@ -205,7 +216,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                         str(student_name),       # student name
                         str(student_id),         # student id
                         str(modcode),        # module code
-                        str("N/A") # TODO module name
+                        str(self.getModuleName(modcode))
                      ).encode('utf-8')
             f.write(content)
 

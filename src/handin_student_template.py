@@ -366,7 +366,7 @@ def send_message(msg, sock):
 def recv_message(sock):
     raw_msglen = recvall(sock, 4)
     if not raw_msglen:
-        return None
+        return ""
     msglen = struct.unpack('>I', raw_msglen)[0]
     raw_data = recvall(sock, msglen)
     if not raw_data:

@@ -61,15 +61,17 @@ class CreateNewModuleDialog(QDialog, Ui_Dialog_Create_New_Module):
         self.accepted.connect(lambda: self.create_module())
         self.buttonBox.setEnabled(False)
         self.lineEdit.textChanged.connect(self.disable_buttonbox)
+        self.lineEdit_name.textChanged.connect(self.disable_buttonbox)
 
     def disable_buttonbox(self):
         # len(self.lineEdit.text()) > 0 and \
-        goodcode = isMatchRegex(regex=ModCodeRE, text=self.lineEdit.text())
+        goodcode = isMatchRegex(regex=ModCodeRE, text=self.lineEdit.text()) and self.lineEdit_name.text() != ""
         self.buttonBox.setEnabled(goodcode)
 
 
     def create_module(self):
         module_code: str = self.lineEdit.text().strip()
+        name: str = self.lineEdit_name.text().strip()
         ay: str = self.lineEdit_academicYear.text().strip()
         # start_semester: str = self.dateEdit_startSemester.text().strip()
         if check_if_module_exists(module_code):
@@ -80,6 +82,11 @@ class CreateNewModuleDialog(QDialog, Ui_Dialog_Create_New_Module):
         self.create_files(moduleDir)
         linkDir = os.path.join(ROOTDIR, module_code, "curr")
         os.symlink(moduleDir, linkDir)
+
+        name_path = os.path.join(ROOTDIR, module_code, "name.txt")
+        with open(name_path, 'w+') as file:
+            file.write(name)
+
         create_message_box(f"Module {module_code} on academic year {ay} created successfully!")
 
     def create_files(self, module_dir):

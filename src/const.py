@@ -5,8 +5,6 @@ from datetime import datetime
 import yaml
 from pathlib import Path
 
-import struct
-
 HANDINHOME = os.getcwd()
 
 if "src" in HANDINHOME:
@@ -182,28 +180,3 @@ def assPath(module_code: str, ay: str, ass: str):
 
 def getFileNameFromPath(path):
     return Path(path).name
-
-def send_message(msg, sock):
-    msg = struct.pack('>I', len(msg)) + bytes(msg, 'utf-8')
-    sock.sendall(msg)
-
-def recv_message(sock):
-    raw_msglen = recvall(sock, 4)
-    if not raw_msglen:
-        return None
-    msglen = struct.unpack('>I', raw_msglen)[0]
-    raw_data = recvall(sock, msglen)
-    if not raw_data:
-        return ""
-    else:
-        return raw_data.decode()
-
-def recvall(sock, n):
-    data = bytearray()
-    while len(data) < n:
-        bytes_to_read = n - len(data)
-        packet = sock.recv(bytes_to_read)
-        if not packet:
-            return None
-        data.extend(packet)
-    return data
