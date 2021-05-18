@@ -2,6 +2,7 @@
 import socket
 import sys
 from datetime import datetime
+import struct
 
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import QFileInfo
@@ -13,7 +14,7 @@ PORT = "8000"
 STUDENT_NAME = "Edward Lynch-Milner"
 STUDENT_ID = "18222021"
 MODULE_CODE = "cs4123"
-MODULE_NAME = "N/A"
+MODULE_NAME = "Data Structures and Algorithms"
 # ****** DYNAMIC CONFIGS ****** #
 
 
@@ -233,32 +234,32 @@ class HandinMainWindow(QMainWindow, Ui_MainWindow):
 
 
 def module_exists(module_code, s: socket.socket):
-    s.sendall(b"Check module exists")
-    if s.recv(1024).decode() == "OK":
-        s.sendall(module_code.encode())
-        result = s.recv(1024).decode()
+    send_message("Check module exists", s)
+    if recv_message(s) == "OK":
+        send_message(module_code, s)
+        result = recv_message(s)
         if result == "True":
             return True
     return False
 
 
 def week_number_valid(module_code, week_number, s: socket.socket):
-    s.sendall(b"Checking Assignment Week")
-    if s.recv(1024).decode() == "OK":
-        s.sendall(module_code.encode())
-        s.sendall(week_number.encode())
-        result = s.recv(1024).decode()
+    send_message("Checking Assignment Week", s)
+    if recv_message(s) == "OK":
+        send_message(module_code, s)
+        send_message(week_number, s)
+        result = recv_message(s)
         if result == "True":
             return True
     return False
 
 
 def check_student_authentication(module_code, student_id, s: socket.socket):
-    s.sendall(b"Authentication")
-    if s.recv(1024).decode() == "OK":
-        s.sendall(module_code.encode())
-        s.sendall(student_id.encode())
-        is_auth = s.recv(1024).decode()
+    send_message("Authentication", s)
+    if recv_message(s) == "OK":
+        send_message(module_code, s)
+        send_message(student_id, s)
+        is_auth = recv_message(s)
         if is_auth == "True":
             return True
     return False
@@ -266,42 +267,42 @@ def check_student_authentication(module_code, student_id, s: socket.socket):
 
 def check_collection_filename(filename, module_code, week_number, s: socket.socket):
     """check if the submitted filename matches required filename"""
-    s.sendall(b"Check collection filename")
-    if s.recv(1024).decode() == "OK":
-        s.sendall(filename.encode())
-        s.sendall(module_code.encode())
-        s.sendall(week_number.encode())
-        is_collected_filename = s.recv(1024).decode()
+    send_message("Check collection filename", s)
+    if recv_message(s) == "OK":
+        send_message(filename, s)
+        send_message(module_code, s)
+        send_message(week_number, s)
+        is_collected_filename = recv_message(s)
         return is_collected_filename
 
 
 def create_vars_file(module_code, student_id, week_number, s: socket.socket) -> str:
     """create a vars.yaml file to store info of a specific student"""
-    s.sendall(b"Create vars file")
-    if s.recv(1024).decode() == "OK":
-        s.sendall(module_code.encode())
-        s.sendall(student_id.encode())
-        s.sendall(week_number.encode())
+    send_message("Create vars file", s)
+    if recv_message(s) == "OK":
+        send_message(module_code, s)
+        send_message(student_id, s)
+        send_message(week_number, s)
         # Success or Failed
-        result = s.recv(1024).decode()
+        result = recv_message(s)
         return result
 
 
 def init_vars_file(module_code, student_id, week_number, s: socket.socket):
-    s.sendall(b"Init vars file")
-    if s.recv(1024).decode() == "OK":
-        s.sendall(module_code.encode())
-        s.sendall(student_id.encode())
-        s.sendall(week_number.encode())
+    send_message("Init vars file", s)
+    if recv_message(s) == "OK":
+        send_message(module_code, s)
+        send_message(student_id, s)
+        send_message(week_number, s)
 
 
 def check_attempts_left(module_code, student_id, week_number, s: socket.socket) -> int:
-    s.sendall(b"Check attempts left")
-    if s.recv(1024).decode() == "OK":
-        s.sendall(module_code.encode())
-        s.sendall(student_id.encode())
-        s.sendall(week_number.encode())
-        attempts_left = s.recv(1024).decode()
+    send_message("Check attempts left", s)
+    if recv_message(s) == "OK":
+        send_message(module_code, s)
+        send_message(student_id, s)
+        send_message(week_number, s)
+        attempts_left = recv_message(s)
         if attempts_left != "False":
             if 1 <= int(attempts_left) <= 10:
                 return int(attempts_left)
@@ -316,11 +317,11 @@ def check_attempts_left(module_code, student_id, week_number, s: socket.socket) 
 
 
 def check_late_penalty(module_code, week_number, s):
-    s.sendall(b"Check late penalty")
-    if s.recv(1024).decode() == "OK":
-        s.sendall(module_code.encode())
-        s.sendall(week_number.encode())
-        late_penalty = s.recv(1024).decode()
+    send_message("Check late penalty", s)
+    if recv_message(s) == "OK":
+        send_message(module_code, s)
+        send_message(week_number, s)
+        late_penalty = recv_message(s)
         try:
             late_penalty = int(late_penalty)
         except:
@@ -329,37 +330,58 @@ def check_late_penalty(module_code, week_number, s):
 
 
 def send_file_to_server(submit_filepath, module_code, week_number, student_id, s: socket.socket):
-    s.sendall(b"Send file to server")
-    if s.recv(1024).decode() == "OK":
-        s.sendall(module_code.encode())
-        s.sendall(week_number.encode())
-        s.sendall(student_id.encode())
-        s.sendall(str(submit_filepath).encode())
-        msg = s.recv(1024).decode()
+    send_message("Send file to server", s)
+    if recv_message(s) == "OK":
+        send_message(module_code, s)
+        send_message(week_number, s)
+        send_message(student_id, s)
+        send_message(str(submit_filepath), s)
+        msg = recv_message(s)
         print(msg)
-        with open(submit_filepath, 'rb') as f:
-            while True:
-                data = f.read(1024)
-                if not data:
-                    s.sendall(b"DONE")
-                    break
-                s.sendall(data)
-        msg = s.recv(1024).decode()
+        with open(submit_filepath, 'r') as f:
+            contents = f.read()
+            contents += "DONE"
+            send_message(contents, s)
+
+        msg = recv_message(s)
         print(msg)
 
 
 def get_exec_result(module_code, week_number, student_id, s: socket.socket, file_suffix, penalty: str) -> str:
-    s.sendall(b"Get exec result")
-    if s.recv(1024).decode() == "OK":
-        s.sendall(module_code.encode())
-        s.sendall(week_number.encode())
-        s.sendall(student_id.encode())
-        s.sendall(file_suffix.encode())
-        s.sendall(penalty.encode())
+    send_message("Get exec result", s)
+    if recv_message(s) == "OK":
+        send_message(module_code, s)
+        send_message(week_number, s)
+        send_message(student_id, s)
+        send_message(file_suffix, s)
+        send_message(penalty, s)
 
-        result = s.recv(1024).decode()
+        result = recv_message(s)
         return result
 
+def send_message(msg, sock):
+    msg = struct.pack('>I', len(msg)) + bytes(msg, 'utf-8')
+    sock.sendall(msg)
+
+def recv_message(sock):
+    raw_msglen = recvall(sock, 4)
+    if not raw_msglen:
+        return ""
+    msglen = struct.unpack('>I', raw_msglen)[0]
+    raw_data = recvall(sock, msglen)
+    if not raw_data:
+        return ""
+    else:
+        return raw_data.decode()
+
+def recvall(sock, n):
+    data = bytearray()
+    while len(data) < n:
+        packet = sock.recv(n - len(data))
+        if not packet:
+            return None
+        data.extend(packet)
+    return data
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)

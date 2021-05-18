@@ -35,6 +35,11 @@ module = ""
 password = ""
 definitions = {}
 
+def createTableItem(val):
+    item = QTableWidgetItem(val)
+    item.setFlags(QtCore.Qt.ItemIsEnabled)
+    return item
+
 def create_message_box(text):
     msgBox = QMessageBox()
     msgBox.setIcon(QMessageBox.Information)
@@ -179,7 +184,7 @@ class ManageStudentMarksDialog(QDialog, Ui_Dialog_Manage_Student_Marks):
                                     "w08", "w09", "w10", "w11", "w12", "w13"])
         self.comboBox_week.currentTextChanged.connect(self.update_table)
         # self.comboBox_moduleCode.currentTextChanged.connect(self.update_table)
-        self.tableWidget.setEnabled(False)
+        #self.tableWidget.setEnabled(False)
         self.update_table()
         self.label_module.setText(module)
 
@@ -199,7 +204,8 @@ class ManageStudentMarksDialog(QDialog, Ui_Dialog_Manage_Student_Marks):
             if not error:
                 horizontal_header_labels += test_items
                 horizontal_header_labels += ["Attempts Left", "Total Marks"]
-                self.tableWidget.setColumnCount(len(horizontal_header_labels))
+                length = len(horizontal_header_labels)
+                self.tableWidget.setColumnCount(length)
                 student_ids, error1 = get_all_student_ids(module)
 
                 if not error1:
@@ -207,10 +213,12 @@ class ManageStudentMarksDialog(QDialog, Ui_Dialog_Manage_Student_Marks):
                     self.tableWidget.setHorizontalHeaderLabels(horizontal_header_labels)
 
                     # write student ids
-                    col = 0
+                    row = 0
                     for _id in student_ids:
-                        self.tableWidget.setItem(col, 0, QTableWidgetItem(_id))
-                        col += 1
+                        self.tableWidget.setItem(row, 0, createTableItem(_id))
+                        for i in range(1, length):
+                            self.tableWidget.setItem(row, i, createTableItem(""))
+                        row += 1
                     # write attendance, compilation, test1, test2 ....
                     vars = {}
                     try:
@@ -225,7 +233,8 @@ class ManageStudentMarksDialog(QDialog, Ui_Dialog_Manage_Student_Marks):
                             for label in horizontal_header_labels[1:-2]:
                                 if label in data.keys():
                                     self.tableWidget.setItem(row, self.columnFromLabel(label),
-                                                             QTableWidgetItem(str(data[label])))
+                                                             createTableItem(str(data[label])))
+
                     except Exception as e:
                         e = format_exc()
                         print(e)
@@ -244,10 +253,10 @@ class ManageStudentMarksDialog(QDialog, Ui_Dialog_Manage_Student_Marks):
                                 data = vars[vars_tuple]
                             if "attemptsLeft" in data.keys():
                                 self.tableWidget.setItem(row, self.columnFromLabel("Attempts Left"),
-                                                         QTableWidgetItem(str(data["attemptsLeft"])))
+                                                         createTableItem(str(data["attemptsLeft"])))
                             if "marks" in data.keys():
                                 self.tableWidget.setItem(row, self.columnFromLabel("Total Marks"),
-                                                         QTableWidgetItem(str(data["marks"])))
+                                                         createTableItem(str(data["marks"])))
                     except Exception as e:
                         e = format_exc()
                         print(e)

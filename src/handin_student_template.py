@@ -161,7 +161,9 @@ class HandinMainWindow(QMainWindow, Ui_MainWindow):
         global initVars
         try:
             s = socket.socket()
+            self.output("Started handin...")
             s.connect((HOST, int(PORT)))
+            self.output("Connected to handin server...")
             # check if module exists
             if module_exists(MODULE_CODE, s):
                 # check if week number valid

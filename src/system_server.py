@@ -276,7 +276,6 @@ def checkLatePenalty(name, sock):
     end_day: datetime = datetime.strptime(end_day, dt_format)
     cutoff_day: datetime = datetime.strptime(cutoff_day, dt_format)
     now: datetime = datetime.now()
-    print(str(start_day) + "-" + str(end_day) + "-" + str(cutoff_day))
     if now < start_day:
         send_message("Submission too early!", sock)
     elif now > cutoff_day:
@@ -448,16 +447,14 @@ def getExecResult(name, sock):
                                     # custom test success
                                     curr_marks = curr_marks + test_marks
                                     result_msg += "%s: %d/%d</br>" % (test_tag, test_marks, test_marks)
-                                    vars_data[key] = test_marks
                                 else:
                                     # custom test failed
                                     result_msg += "%s: %d/%d</br>" % (test_tag, 0, test_marks)
-                                    vars_data[key] = 0
+                                    test_marks = 0
+
+                            vars_data[key] = test_marks
 
             # check assignment attempts left and update attempts left
-            vars_filepath = const.get_vars_file_path(module_code, week_number, student_id)
-            with open(vars_filepath, 'r') as stream:
-                vars_data: dict = yaml.safe_load(stream)
             if "attemptsLeft" in vars_data and vars_data["attemptsLeft"]:
                 attemptsLeft = vars_data["attemptsLeft"]
                 vars_data["attemptsLeft"] = attemptsLeft - 1
