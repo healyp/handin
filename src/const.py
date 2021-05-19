@@ -45,7 +45,7 @@ class FileServerCommands:
     MODULE_INFO = "module_info"
     GET_VARS = "get_vars"
     CHECK_EXISTS = "check_exists"
-    CREATE_WEEK_DIRECTORY = "create_week_directory"
+    CREATE_ASSIGNMENT_DIRECTORY = "create_assignment_directory"
     UPDATE_PARAMS_FILE = "update_params_file"
     CREATE_DEFINITIONS_FILE = "create_definitions_file"
     UPDATE_DEFINITIONS_FILE = "update_definitions_file"
@@ -54,7 +54,7 @@ class FileServerCommands:
     CLONE_ASSIGNMENT = "clone_assignment"
     UPLOAD_FILE = "upload_file" # The path to the file should be a relative path as the server will prepend ROOTDIR to it
     VALID_COMMANDS = [AUTHENTICATE_LECTURER, ALERT_MAC_ADDRESS, TRUST_MAC_ADDRESS, GET_LECTURER_MODULES, MODULE_INFO
-                     , GET_VARS, CHECK_EXISTS, CREATE_WEEK_DIRECTORY, UPDATE_PARAMS_FILE, CREATE_DEFINITIONS_FILE
+                     , GET_VARS, CHECK_EXISTS, CREATE_ASSIGNMENT_DIRECTORY, UPDATE_PARAMS_FILE, CREATE_DEFINITIONS_FILE
                      , UPDATE_DEFINITIONS_FILE, GET_DEFINITIONS_FILE, GET_PARAMS, CLONE_ASSIGNMENT, UPLOAD_FILE]
 
     @staticmethod
@@ -77,10 +77,9 @@ class FileServerCommands:
     class CheckExistsRequestCodes:
         CODE = "request_code"
 
-        WEEK_EXISTS = "week_exists"
         MODULE_EXISTS = "module_exists"
         ASSIGNMENT_EXISTS = "assignment_exists"
-        VALID_CODES = [WEEK_EXISTS, MODULE_EXISTS, ASSIGNMENT_EXISTS]
+        VALID_CODES = [MODULE_EXISTS, ASSIGNMENT_EXISTS]
 
         @staticmethod
         def validateCode(code):

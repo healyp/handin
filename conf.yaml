@@ -1,5 +1,5 @@
 registration_host: '127.0.0.1' # The host for the registration server
-registration_port: 8000 # The port for the registration server
+registration_port: 8080 # The port for the registration server
 system_host: '127.0.0.1' # The host for the handin system
 system_port: 8000 # The port for the handin system
 file_server_host: '127.0.0.1' # The host for the handin file server

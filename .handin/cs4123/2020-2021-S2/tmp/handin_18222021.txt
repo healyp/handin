@@ -84,9 +84,8 @@ class Ui_MainWindow(object):
         self.label_7 = QtWidgets.QLabel(self.centralwidget)
         self.label_7.setGeometry(QtCore.QRect(402, 420, 111, 28))
         self.label_7.setObjectName("label_7")
-        self.comboBox_weekNumber = QtWidgets.QComboBox(self.centralwidget)
-        self.comboBox_weekNumber.setGeometry(QtCore.QRect(520, 420, 93, 28))
-        self.comboBox_weekNumber.setObjectName("comboBox_weekNumber")
+        self.assignmentName = QtWidgets.QLineEdit(self.centralwidget)
+        self.assignmentName.setGeometry(QtCore.QRect(520, 420, 93, 28))
         self.textEdit_Output = QtWidgets.QTextEdit(self.centralwidget)
         self.textEdit_Output.setGeometry(QtCore.QRect(20, 470, 750, 200))
         self.textEdit_Output.setStyleSheet("color: rgb(102, 102, 255)")
@@ -107,7 +106,7 @@ class Ui_MainWindow(object):
         self.pushButton_browse.setText(_translate("MainWindow", "Browse"))
         self.pushButton_handin.setText(_translate("MainWindow", "Handin"))
         self.label_6.setText(_translate("MainWindow", "Output"))
-        self.label_7.setText(_translate("MainWindow", "Week Number:"))
+        self.label_7.setText(_translate("MainWindow", "Assignment:"))
         self.textEdit_Output.setHtml(_translate("MainWindow",
                                                 "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
                                                 "<html><head><meta name=\"qrichtext\" content=\"1\" />"
@@ -129,16 +128,15 @@ class HandinMainWindow(QMainWindow, Ui_MainWindow):
         self.lineEdit_studentID.setEnabled(False)
         self.lineEdit_studentName.setText(STUDENT_NAME)
         self.lineEdit_studentName.setEnabled(False)
-        self.comboBox_weekNumber.addItems(["w01", "w02", "w03", "w04", "w05", "w06", "w07",
-                                           "w08", "w09", "w10", "w11", "w12", "w13"])
         self.textEdit_Output.setReadOnly(True)
         self.textEdit_showFileContent.setReadOnly(True)
         self.lineEdit_chooseFile.setReadOnly(True)
         self.lineEdit_chooseFile.textChanged.connect(self.disable_handin)
+        self.assignmentName.textChanged.connect(self.disable_handin)
         self.pushButton_handin.setEnabled(False)
 
     def disable_handin(self):
-        if len(self.lineEdit_chooseFile.text()) > 0:
+        if len(self.lineEdit_chooseFile.text()) > 0 and len(self.assignmentName.text().strip()) > 0:
             self.pushButton_handin.setEnabled(True)
         else:
             self.pushButton_handin.setEnabled(False)
@@ -161,41 +159,43 @@ class HandinMainWindow(QMainWindow, Ui_MainWindow):
         global initVars
         try:
             s = socket.socket()
+            self.output("Started handin...")
             s.connect((HOST, int(PORT)))
+            self.output("Connected to handin server...")
             # check if module exists
             if module_exists(MODULE_CODE, s):
-                # check if week number valid
-                week_number = self.comboBox_weekNumber.currentText()
-                if week_number_valid(MODULE_CODE, week_number, s):
-                    self.output("Submitting code to %s::%s" % (MODULE_CODE, week_number))
+                # check if assignment name is valid
+                assignment_name = self.assignmentName.text().strip()
+                if assignment_name_valid(MODULE_CODE, assignment_name, s):
+                    self.output("Submitting code to %s::%s" % (MODULE_CODE, assignment_name))
                     # check student id authentication
                     if check_student_authentication(MODULE_CODE, STUDENT_ID, s):
                         self.output("Student ID: %s has been authenticated" % STUDENT_ID)
                         # create a vars.yaml file to store info of a specific student
-                        result = create_vars_file(MODULE_CODE, STUDENT_ID, week_number, s)
+                        result = create_vars_file(MODULE_CODE, STUDENT_ID, assignment_name, s)
                         if result == "Success":
                             print("Vars file has been created ...")
                             initVars = True
                         elif result == "Failed":
                             print("Vars file already exists")
                             initVars = False
-                        self.run_handin(week_number, s, initVars)
+                        self.run_handin(assignment_name, s, initVars)
                     else:
                         self.output("Student ID: %s not authenticated" % STUDENT_ID, flag="ERROR")
                 else:
-                    self.output("%s not valid for %s" % (week_number, MODULE_CODE), flag="ERROR")
+                    self.output("%s not valid for %s" % (assignment_name, MODULE_CODE), flag="ERROR")
             else:
                 self.output("%s not exist!" % MODULE_CODE, flag="ERROR")
         except Exception as e:
             self.output(str(e), flag="ERROR")
 
-    def run_handin(self, week_number, s: socket.socket, init_vars: bool):
+    def run_handin(self, assignment_name, s: socket.socket, init_vars: bool):
         # initialize vars.yaml file
         if init_vars:
-            init_vars_file(MODULE_CODE, STUDENT_ID, week_number, s)
+            init_vars_file(MODULE_CODE, STUDENT_ID, assignment_name, s)
         # get attempts left
-        attempts_left: int = check_attempts_left(MODULE_CODE, STUDENT_ID, week_number, s)
-        late_penalty_msg = check_late_penalty(MODULE_CODE, week_number, s)
+        attempts_left: int = check_attempts_left(MODULE_CODE, STUDENT_ID, assignment_name, s)
+        late_penalty_msg = check_late_penalty(MODULE_CODE, assignment_name, s)
         penalty: int = -1
         if isinstance(late_penalty_msg, str):
             self.output(late_penalty_msg, flag="ERROR")
@@ -206,13 +206,13 @@ class HandinMainWindow(QMainWindow, Ui_MainWindow):
             # check if the filename matches required filename
             filename = QFileInfo(self.submit_filepath).fileName()
             file_suffix = QFileInfo(self.submit_filepath).suffix()
-            msg = check_collection_filename(filename, MODULE_CODE, week_number, s)
+            msg = check_collection_filename(filename, MODULE_CODE, assignment_name, s)
             if msg == "True":
                 # copy file to server side
-                send_file_to_server(self.submit_filepath, MODULE_CODE, week_number, STUDENT_ID, s)
+                send_file_to_server(self.submit_filepath, MODULE_CODE, assignment_name, STUDENT_ID, s)
                 # get exec result output
                 print('send file to server finished ...')
-                result = get_exec_result(MODULE_CODE, week_number, STUDENT_ID, s, file_suffix, str(penalty))
+                result = get_exec_result(MODULE_CODE, assignment_name, STUDENT_ID, s, file_suffix, str(penalty))
                 self.output(result)
             else:
                 self.output(msg, "ERROR")
@@ -243,11 +243,11 @@ def module_exists(module_code, s: socket.socket):
     return False
 
 
-def week_number_valid(module_code, week_number, s: socket.socket):
-    send_message("Checking Assignment Week", s)
+def assignment_name_valid(module_code, assignment_name, s: socket.socket):
+    send_message("Checking Assignment Name", s)
     if recv_message(s) == "OK":
         send_message(module_code, s)
-        send_message(week_number, s)
+        send_message(assignment_name, s)
         result = recv_message(s)
         if result == "True":
             return True
@@ -265,43 +265,43 @@ def check_student_authentication(module_code, student_id, s: socket.socket):
     return False
 
 
-def check_collection_filename(filename, module_code, week_number, s: socket.socket):
+def check_collection_filename(filename, module_code, assignment_name, s: socket.socket):
     """check if the submitted filename matches required filename"""
     send_message("Check collection filename", s)
     if recv_message(s) == "OK":
         send_message(filename, s)
         send_message(module_code, s)
-        send_message(week_number, s)
+        send_message(assignment_name, s)
         is_collected_filename = recv_message(s)
         return is_collected_filename
 
 
-def create_vars_file(module_code, student_id, week_number, s: socket.socket) -> str:
+def create_vars_file(module_code, student_id, assignment_name, s: socket.socket) -> str:
     """create a vars.yaml file to store info of a specific student"""
     send_message("Create vars file", s)
     if recv_message(s) == "OK":
         send_message(module_code, s)
         send_message(student_id, s)
-        send_message(week_number, s)
+        send_message(assignment_name, s)
         # Success or Failed
         result = recv_message(s)
         return result
 
 
-def init_vars_file(module_code, student_id, week_number, s: socket.socket):
+def init_vars_file(module_code, student_id, assignment_name, s: socket.socket):
     send_message("Init vars file", s)
     if recv_message(s) == "OK":
         send_message(module_code, s)
         send_message(student_id, s)
-        send_message(week_number, s)
+        send_message(assignment_name, s)
 
 
-def check_attempts_left(module_code, student_id, week_number, s: socket.socket) -> int:
+def check_attempts_left(module_code, student_id, assignment_name, s: socket.socket) -> int:
     send_message("Check attempts left", s)
     if recv_message(s) == "OK":
         send_message(module_code, s)
         send_message(student_id, s)
-        send_message(week_number, s)
+        send_message(assignment_name, s)
         attempts_left = recv_message(s)
         if attempts_left != "False":
             if 1 <= int(attempts_left) <= 10:
@@ -316,11 +316,11 @@ def check_attempts_left(module_code, student_id, week_number, s: socket.socket) 
     return -1
 
 
-def check_late_penalty(module_code, week_number, s):
+def check_late_penalty(module_code, assignment_name, s):
     send_message("Check late penalty", s)
     if recv_message(s) == "OK":
         send_message(module_code, s)
-        send_message(week_number, s)
+        send_message(assignment_name, s)
         late_penalty = recv_message(s)
         try:
             late_penalty = int(late_penalty)
@@ -329,11 +329,11 @@ def check_late_penalty(module_code, week_number, s):
         return late_penalty
 
 
-def send_file_to_server(submit_filepath, module_code, week_number, student_id, s: socket.socket):
+def send_file_to_server(submit_filepath, module_code, assignment_name, student_id, s: socket.socket):
     send_message("Send file to server", s)
     if recv_message(s) == "OK":
         send_message(module_code, s)
-        send_message(week_number, s)
+        send_message(assignment_name, s)
         send_message(student_id, s)
         send_message(str(submit_filepath), s)
         msg = recv_message(s)
@@ -347,11 +347,11 @@ def send_file_to_server(submit_filepath, module_code, week_number, student_id, s
         print(msg)
 
 
-def get_exec_result(module_code, week_number, student_id, s: socket.socket, file_suffix, penalty: str) -> str:
+def get_exec_result(module_code, assignment_name, student_id, s: socket.socket, file_suffix, penalty: str) -> str:
     send_message("Get exec result", s)
     if recv_message(s) == "OK":
         send_message(module_code, s)
-        send_message(week_number, s)
+        send_message(assignment_name, s)
         send_message(student_id, s)
         send_message(file_suffix, s)
         send_message(penalty, s)
@@ -360,11 +360,11 @@ def get_exec_result(module_code, week_number, student_id, s: socket.socket, file
         return result
 
 def send_message(msg, sock):
-    msg = struct.pack('>I', len(msg)) + bytes(msg, 'utf-8')
+    msg = struct.pack('>I', len(msg)) + bytes(msg, 'utf-8') # prepend a 4 byte string containing the length of the msg to the start of the string
     sock.sendall(msg)
 
 def recv_message(sock):
-    raw_msglen = recvall(sock, 4)
+    raw_msglen = recvall(sock, 4) # first 4 letters of the string is a struct representation of the message length
     if not raw_msglen:
         return ""
     msglen = struct.unpack('>I', raw_msglen)[0]
@@ -377,6 +377,9 @@ def recv_message(sock):
 def recvall(sock, n):
     data = bytearray()
     while len(data) < n:
+        byte_size = n - len(data)
+        if (byte_size > 1024):
+            byte_size = 1024
         packet = sock.recv(n - len(data))
         if not packet:
             return None

@@ -29,49 +29,10 @@ class CheckExists(AbstractCommand):
             respond(request, False, log)
             return
 
-        if code == FileServerCommands.CheckExistsRequestCodes.WEEK_EXISTS:
-            self.checkWeekExists(request)
-        elif code == FileServerCommands.CheckExistsRequestCodes.MODULE_EXISTS:
+        if code == FileServerCommands.CheckExistsRequestCodes.MODULE_EXISTS:
             self.checkModuleExists(request)
         elif code == FileServerCommands.CheckExistsRequestCodes.ASSIGNMENT_EXISTS:
             self.checkAssignmentExists(request)
-
-    def checkWeekExists(self, request: Request):
-        params = request.args
-
-        module = None
-        week_number = None
-
-        if 'module' in params:
-            module = params['module']
-
-        if 'week_number' in params:
-            week_number = params['week_number']
-
-        log_message = ""
-        error_message = ""
-        showError = False
-        if not module:
-            log_message = "Mandatory module parameter not provided"
-            error_message = "You need to provide a module parameter"
-            showError = True
-        elif not week_number:
-            log_message = "Mandatory week_number parameter not provided"
-            error_message = "You need to provide a week_number parameter"
-            showError = True
-
-        if showError:
-            request_bad("CHECK_EXISTS: WEEK_EXISTS", log_message)
-            respond(request, False, error_message)
-        else:
-            logging.debug(f"Checking if week {week_number} exists for module {module}")
-            exists = const.check_if_week_exists(module, week_number)
-            response_data = {
-                'exists': exists
-            }
-
-            request_ok("CHECK_EXISTS: WEEK_EXISTS")
-            respond(request, True, "CHECK_EXISTS: WEEK_EXISTS successful", response_data)
 
     def checkModuleExists(self, request: Request):
         params = request.args
@@ -95,7 +56,7 @@ class CheckExists(AbstractCommand):
             respond(request, True, "CHECK_EXISTS: MODULE_EXISTS successful", response_data)
 
     def checkAssignmentExists(self, request: Request):
-        params = request,args
+        params = request.args
 
         module = None
         academic_year = None

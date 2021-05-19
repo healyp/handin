@@ -428,53 +428,7 @@ def get_vars(module, week_number, student_id):
         error = True
 
     return {}, error
-
-def checkWeekExists(module, week_number):
-    global s
-    try:
-        if setSocket():
-            args = {
-                FileServerCommands.CheckExistsRequestCodes.CODE: FileServerCommands.CheckExistsRequestCodes.WEEK_EXISTS,
-                'module': module,
-                'week_number': week_number
-            }
-
-            response = request(Request(s, FileServerCommands.CHECK_EXISTS, args))
-
-            if response is not None:
-                if not response.disconnected:
-                    if response.success == "True":
-                        exists = response.data['exists']
-
-                        if (exists == "True"):
-                            exists = True
-                        else:
-                            exists = False
-
-                        return exists, False
-                    else:
-                        error = True
-                        doError(f"A server error occurred checking if week exists: {response.message}")
-                else:
-                    s = None
-                    error = True
-                    if response.error:
-                        logging.error(f"Response Error: {response.error_message}")
-            else:
-                s = None
-                error = True
-                if request.error:
-                    logging.error(f"Request Error: {request.error_message}")
-
-        else:
-            error = True
-    except (MessagingError) as m:
-        s = None
-        doError(f"{m}")
-        error = True
-
-    return False, error
-
+    
 def checkModuleExists(module):
     global s
     try:
@@ -567,16 +521,16 @@ def checkAssignmentExists(module, academic_year, assignment):
 
     return False, error
 
-def createWeekDirectory(module, week_number):
+def createAssignmentDirectory(module, assignment_name):
     global s
     try:
         if setSocket():
             args = {
                 'module': module,
-                'week_number': week_number
+                'assignment': assignment_name
             }
 
-            response = request(Request(s, FileServerCommands.CREATE_WEEK_DIRECTORY, args))
+            response = request(Request(s, FileServerCommands.CREATE_ASSIGNMENT_DIRECTORY, args))
 
             if response is not None:
                 if not response.disconnected:

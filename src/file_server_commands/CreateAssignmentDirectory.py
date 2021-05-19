@@ -5,8 +5,8 @@ from handin_messaging import *
 import logging
 from handin_file_server import *
 
-class CreateWeekDirectory(AbstractCommand):
-    COMMAND = FileServerCommands.CREATE_WEEK_DIRECTORY
+class CreateAssignmentDirectory(AbstractCommand):
+    COMMAND = FileServerCommands.CREATE_ASSIGNMENT_DIRECTORY
 
     def __init__(self):
         super().__init__()
@@ -15,13 +15,13 @@ class CreateWeekDirectory(AbstractCommand):
         params = request.args
 
         module = None
-        week_number = None
+        assignment = None
 
         if 'module' in params:
             module = params['module']
 
-        if 'week_number' in params:
-            week_number = params['week_number']
+        if 'assignment' in params:
+            assignment = params['assignment']
 
         log_message = ""
         error_message = ""
@@ -31,16 +31,16 @@ class CreateWeekDirectory(AbstractCommand):
             log_message = "Mandatory module parameter not provided"
             error_message = "You need to provide a module parameter"
             showError = True
-        elif not week_number:
-            log_message = "Mandatory week_number parameter not provided"
-            error_message = "You need to provide a week_number parameter"
+        elif not assignment:
+            log_message = "Mandatory assignment parameter not provided"
+            error_message = "You need to provide an assignment parameter"
             showError = True
 
         if showError:
-            request_bad("CREATE_WEEK_DIRECTORY", log_message)
+            request_bad("CREATE_ASSIGNMENT_DIRECTORY", log_message)
             respond(request, False, error_message)
         else:
-            path = f"{ROOTDIR}/{module}/curr/assignments/{week_number}"
+            path = f"{ROOTDIR}/{module}/curr/assignments/{assignment}"
             if not os.path.exists(path):
                 os.makedirs(path)
                 logging.debug(f"Creating directory {path}")
@@ -56,5 +56,5 @@ class CreateWeekDirectory(AbstractCommand):
                 'params_path': params_path
             }
 
-            request_ok("CREATE_WEEK_DIRECTORY")
-            respond(request, True, "CREATE_WEEK_DIRECTORY successful", response_data)
+            request_ok("CREATE_ASSIGNMENT_DIRECTORY")
+            respond(request, True, "CREATE_ASSIGNMENT_DIRECTORY successful", response_data)

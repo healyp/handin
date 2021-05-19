@@ -334,7 +334,8 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         # self.comboBox_moduleCode.editTextChanged.connect(self.disable_buttonbox)
         # register listeners for all line edits
         for line_edit in self.findChildren(QLineEdit):
-            line_edit.textChanged.connect(self.disable_buttonbox)
+            if line_edit != self.lineEdit_assName:
+                line_edit.textChanged.connect(self.disable_buttonbox)
         # register listeners for all group boxes
         for group_box in self.findChildren(QGroupBox):
             group_box.toggled.connect(self.disable_buttonbox)
@@ -415,7 +416,7 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         self.buttonBox.setEnabled(True)
         line_edits: list = [le for le in self.findChildren(QLineEdit)]
         for line_edit in line_edits:
-            if line_edit.isEnabled():
+            if line_edit.isEnabled() and line_edit != self.lineEdit_assName:
                 if not len(line_edit.text()) > 0:
                     self.buttonBox.setEnabled(False)
                     return
@@ -447,6 +448,8 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         module_code = module
         week_number = self.weekNumber_comboBox.currentText().strip()
         assName = self.lineEdit_assName.text().strip()
+        if assName == "":
+            assName = week_number
         start_day = self.dateTimeEdit_startDay.text().strip()
         end_day = self.dateTimeEdit_endDay.text().strip()
         cutoff_day = self.dateTimeEdit_cutoffDay.text().strip()
@@ -503,19 +506,19 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
             tests["test4"] = {"tag": tag, "marks": marks, "command": command, "inputDataFile": inputDataFile,
                               "answerFile": answerFile, "filterFile": filterFile, "filterCommand": filterCommand}
 
-        week_exists, error = checkWeekExists(module_code, week_number)
+        assignment_exists, error = checkAssignmentExists(module_code, const.whatAY(), assName)
         if not error:
-            if not week_exists:
-                if self.create_week_directory(module_code, week_number):
+            if not assignment_exists:
+                if self.create_assignment_directory(module_code, assName):
                     self.update_params_file(
                         moduleCode=module_code, weekNumber=week_number, startDay=start_day,
                         endDay=end_day, cutoffDay=cutoff_day, penaltyPerDay=penalty_per_day,
                         totalAttempts=total_attempts, collectionFilename=collection_filename, tests=tests)
             else:
-                create_message_box(f"{week_number} for module {module_code} already exists!")
+                create_message_box(f"{assName} for module {module_code} already exists!")
 
-    def create_week_directory(self, module, week_number):
-        params_path, error = createWeekDirectory(module, week_number)
+    def create_assignment_directory(self, module, assignment_name):
+        params_path, error = createAssignmentDirectory(module, assignment_name)
         if not error:
             self.params_path = params_path
             return True
@@ -722,10 +725,10 @@ class CreateRepeatAssignmentsDialog(QDialog, Ui_Dialog_Create_Repeat_Assignments
             tests["test4"] = {"tag": tag, "marks": marks, "command": command, "inputDataFile": inputDataFile,
                               "answerFile": answerFile, "filterFile": filterFile, "filterCommand": filterCommand}
 
-        week_exists, error = checkWeekExists(module_code, week_number)
+        assignment_exists, error = checkAssignmentExists(module_code, const.whatAY(), week_number)
         if not error:
-            if not week_exists:
-                if self.create_week_directory(module_code, week_number):
+            if not assignment_exists:
+                if self.create_assignment_directory(module_code, week_number):
                     self.update_params_file(
                         moduleCode=module_code, weekNumber=week_number, startDay=start_day,
                         endDay=end_day, cutoffDay=cutoff_day, penaltyPerDay=penalty_per_day,
@@ -733,8 +736,8 @@ class CreateRepeatAssignmentsDialog(QDialog, Ui_Dialog_Create_Repeat_Assignments
             else:
                 create_message_box(f"{week_number} for module {module_code} already exists!")
 
-    def create_week_directory(self, module, week_number):
-        params_path, error = createWeekDirectory(module, week_number)
+    def create_assignment_directory(self, module, week_number):
+        params_path, error = createAssignmentDirectory(module, week_number)
         if not error:
             self.params_path = params_path
             return True

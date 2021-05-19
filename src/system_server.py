@@ -23,17 +23,17 @@ def get_file_content(path, mode='r'):
     return content
 
 
-def get_total_attempts(module_code, week_number) -> int:
+def get_total_attempts(module_code, assignment_name) -> int:
     """read /**weekNum**/params.yaml file to get totalAttempts value"""
-    path = const.get_params_file_path(module_code, week_number)
+    path = const.get_params_file_path(module_code, assignment_name)
     with open(path, 'r') as stream:
         data: dict = yaml.safe_load(stream)
     return data.get("totalAttempts")
 
 
-def getPenaltyPerDay(module_code, week_number):
+def getPenaltyPerDay(module_code, assignment_name):
     """get penalty per day for a module"""
-    params_filepath = const.get_params_file_path(module_code, week_number)
+    params_filepath = const.get_params_file_path(module_code, assignment_name)
     with open(params_filepath, 'r') as stream:
         data = yaml.safe_load(stream)
     if data.get("penaltyPerDay"):
@@ -43,9 +43,9 @@ def getPenaltyPerDay(module_code, week_number):
         return "False"
 
 
-def getStartDay(module_code, week_number):
+def getStartDay(module_code, assignment_name):
     """get start day for a module"""
-    params_filepath = const.get_params_file_path(module_code, week_number)
+    params_filepath = const.get_params_file_path(module_code, assignment_name)
     with open(params_filepath, 'r') as stream:
         data = yaml.safe_load(stream)
     if data.get("startDay"):
@@ -55,9 +55,9 @@ def getStartDay(module_code, week_number):
         return "False"
 
 
-def getEndDay(module_code, week_number):
+def getEndDay(module_code, assignment_name):
     """get end day for a module"""
-    params_filepath = const.get_params_file_path(module_code, week_number)
+    params_filepath = const.get_params_file_path(module_code, assignment_name)
     with open(params_filepath, 'r') as stream:
         data = yaml.safe_load(stream)
     if data.get("endDay"):
@@ -67,9 +67,9 @@ def getEndDay(module_code, week_number):
         return "False"
 
 
-def getCutoffDay(module_code, week_number):
+def getCutoffDay(module_code, assignment_name):
     """get cutoff day for a module"""
-    params_filepath = const.get_params_file_path(module_code, week_number)
+    params_filepath = const.get_params_file_path(module_code, assignment_name)
     with open(params_filepath, 'r') as stream:
         data = yaml.safe_load(stream)
     if data.get("cutoffDay"):
@@ -79,8 +79,8 @@ def getCutoffDay(module_code, week_number):
         return "False"
 
 
-def get_required_code_filename(module_code, week_number) -> str:
-    params_path = const.get_params_file_path(module_code, week_number)
+def get_required_code_filename(module_code, assignment_name) -> str:
+    params_path = const.get_params_file_path(module_code, assignment_name)
     with open(params_path, 'r') as stream:
         data = yaml.safe_load(stream)
     return data.get("collectionFilename") if data.get("collectionFilename") else ""
@@ -96,9 +96,9 @@ def RetrCommand(name, sock: socket.socket):
     elif msg == "Check attempts left":
         time.sleep(.1)
         checkAttemptsLeft(name, sock)
-    elif msg == "Checking Assignment Week":
+    elif msg == "Checking Assignment Name":
         time.sleep(.1)
-        checkIfAssignmentWeek(name, sock)
+        checkIfAssignmentName(name, sock)
     elif msg == "Check module exists":
         time.sleep(.1)
         checkIfModuleExists(name, sock)
@@ -149,9 +149,9 @@ def checkAttemptsLeft(name, sock):
     send_message("OK", sock)
     module_code = recv_message(sock)
     student_id = recv_message(sock)
-    week_number = recv_message(sock)
+    assignment_name = recv_message(sock)
     # read vars.yaml file to get attemptsLeft value
-    vars_filepath = const.get_vars_file_path(module_code, week_number, student_id)
+    vars_filepath = const.get_vars_file_path(module_code, assignment_name, student_id)
     with open(vars_filepath, 'r') as stream:
         data: dict = yaml.safe_load(stream)
     if data.get("attemptsLeft"):
@@ -178,15 +178,15 @@ def checkIfModuleExists(name, sock):
     RetrCommand(name, sock)
 
 
-def checkIfAssignmentWeek(name, sock):
-    """check if an assignment week"""
+def checkIfAssignmentName(name, sock):
+    """check if an assignment exists"""
     send_message("OK", sock)
     module_code = recv_message(sock)
-    week_number = recv_message(sock)
+    assignment_name = recv_message(sock)
     path = const.ROOTDIR + "/" + module_code + "/curr/assignments/"
     if os.path.exists(path):
-        weeks = [name for name in os.listdir(path)]
-        if week_number in weeks:
+        assignments = [name for name in os.listdir(path)]
+        if assignment_name in assignments:
             send_message("True", sock)
         else:
             send_message("False", sock)
@@ -200,8 +200,8 @@ def createVarsFile(name, sock):
     send_message("OK", sock)
     module_code = recv_message(sock)
     student_id = recv_message(sock)
-    week_number = recv_message(sock)
-    vars_filepath = const.get_vars_file_path(module_code, week_number, student_id)
+    assignment_name = recv_message(sock)
+    vars_filepath = const.get_vars_file_path(module_code, assignment_name, student_id)
     vars_directory = os.path.dirname(vars_filepath)
     if not os.path.isdir(vars_directory):
         os.makedirs(vars_directory)
@@ -221,14 +221,14 @@ def initVarsFile(name, sock):
     send_message("OK", sock)
     module_code = recv_message(sock)
     student_id = recv_message(sock)
-    week_number = recv_message(sock)
-    vars_filepath = const.get_vars_file_path(module_code, week_number, student_id)
-    params_filepath = const.get_params_file_path(module_code, week_number)
+    assignment_name = recv_message(sock)
+    vars_filepath = const.get_vars_file_path(module_code, assignment_name, student_id)
+    params_filepath = const.get_params_file_path(module_code, assignment_name)
     with open(params_filepath, 'r') as stream:
         params: dict = yaml.safe_load(stream)
 
     data = {
-        "attemptsLeft": get_total_attempts(module_code, week_number),
+        "attemptsLeft": get_total_attempts(module_code, assignment_name),
         "marks": 0,
     }
 
@@ -247,21 +247,21 @@ def checkLatePenalty(name, sock):
     """Get late penalty"""
     send_message("OK", sock)
     module_code = recv_message(sock)
-    week_number = recv_message(sock)
+    assignment_name = recv_message(sock)
 
-    penalty_per_day: str = getPenaltyPerDay(module_code, week_number)
+    penalty_per_day: str = getPenaltyPerDay(module_code, assignment_name)
     if penalty_per_day == "False":
         send_message("ERROR: penaltyPerDay doesn't exist!!!", sock)
 
-    start_day: str = getStartDay(module_code, week_number)
+    start_day: str = getStartDay(module_code, assignment_name)
     if start_day == "False":
         send_message("ERROR: startDay doesn't exist!!!", sock)
 
-    end_day: str = getEndDay(module_code, week_number)
+    end_day: str = getEndDay(module_code, assignment_name)
     if end_day == "False":
         send_message("ERROR: endDay doesn't exist!!!", sock)
 
-    cutoff_day: str = getCutoffDay(module_code, week_number)
+    cutoff_day: str = getCutoffDay(module_code, assignment_name)
     if cutoff_day == "False":
         send_message("ERROR: cutoffDay doesn't exist!!!", sock)
 
@@ -288,9 +288,9 @@ def checkCollectionFilename(name, sock):
     send_message("OK", sock)
     filename = recv_message(sock)
     module_code = recv_message(sock)
-    week_number = recv_message(sock)
+    assignment_name = recv_message(sock)
 
-    params_filepath = const.get_params_file_path(module_code, week_number)
+    params_filepath = const.get_params_file_path(module_code, assignment_name)
     with open(params_filepath, 'r') as stream:
         data = yaml.safe_load(stream)
     if data.get("collectionFilename") and str(data.get("collectionFilename")) == filename:
@@ -304,11 +304,11 @@ def sendFileToServer(name, sock):
     """Copy code file to server side"""
     send_message("OK", sock)
     module_code = recv_message(sock)
-    week_number = recv_message(sock)
+    assignment_name = recv_message(sock)
     student_id = recv_message(sock)
     filepath = recv_message(sock)
     filename = os.path.basename(filepath)
-    path = const.get_program_file_path(module_code, week_number, student_id, filename)
+    path = const.get_program_file_path(module_code, assignment_name, student_id, filename)
     path_directory = os.path.dirname(path)
     if not os.path.isdir(path_directory):
         os.makedirs(path_directory)
@@ -329,7 +329,7 @@ def getExecResult(name, sock):
     """Exec the program and get exec result"""
     send_message("OK", sock)
     module_code = recv_message(sock)
-    week_number = recv_message(sock)
+    assignment_name = recv_message(sock)
     student_id = recv_message(sock)
     file_suffix = recv_message(sock)
     penalty = recv_message(sock)
@@ -341,10 +341,10 @@ def getExecResult(name, sock):
 
     curr_marks: int = 0
     result_msg: str = ""
-    required_code_filename = get_required_code_filename(module_code, week_number)
-    code_filepath = const.get_program_file_path(module_code, week_number, student_id, required_code_filename)
-    params_filepath = const.get_params_file_path(module_code, week_number)
-    vars_filepath = const.get_vars_file_path(module_code, week_number, student_id)
+    required_code_filename = get_required_code_filename(module_code, assignment_name)
+    code_filepath = const.get_program_file_path(module_code, assignment_name, student_id, required_code_filename)
+    params_filepath = const.get_params_file_path(module_code, assignment_name)
+    vars_filepath = const.get_vars_file_path(module_code, assignment_name, student_id)
     with open(params_filepath, 'r') as stream:
         data: dict = yaml.safe_load(stream)
     with open(vars_filepath, 'r') as stream:
