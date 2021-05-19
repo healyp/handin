@@ -402,49 +402,51 @@ def getExecResult(name, sock):
                         answer_file_path = tests[key]["answerFile"]
                         filter_file_path = tests[key]["filterFile"]
                         filter_command = tests[key]["filterCommand"]
+                        stdin_input = None
                         if input_data_file_path is not None and input_data_file_path != '':
                             input_data_file = open(input_data_file_path, 'r')
+                            stdin_input = input_data_file
 
-                            # change working directory
-                            os.chdir(os.path.dirname(code_filepath))
-                            proc = Popen(test_command, stdin=input_data_file, stdout=PIPE, stderr=PIPE, shell=False)
-                            output, stderr = proc.communicate()  # bytes
+                        # change working directory
+                        os.chdir(os.path.dirname(code_filepath))
+                        proc = Popen(test_command, stdin=stdin_input, stdout=PIPE, stderr=PIPE, shell=True)
+                        output, stderr = proc.communicate()  # bytes
 
-                            # compare stdout with the answer file
-                            if answer_file_path is not None and answer_file_path != '':
-                                answer_file = open(answer_file_path, 'rb')
-                                answer: bytes = answer_file.read()
+                        # compare stdout with the answer file
+                        if answer_file_path is not None and answer_file_path != '':
+                            answer_file = open(answer_file_path, 'rb')
+                            answer: bytes = answer_file.read()
 
-                                # use stdout and answer as two argv of filter file, then perform filtering
-                                # TODO: may need to be changed ...
-                                if (filter_file_path is not None and filter_file_path != '') and \
-                                        (filter_command is not None and filter_command != ''):
-                                    try:
-                                        # copy filter file to student dir
-                                        filter_filename = os.path.basename(filter_file_path)
-                                        filter_file_path_dst = os.path.join(os.path.dirname(code_filepath), filter_filename)
-                                        with open(filter_file_path_dst, 'w'):
-                                            pass
-                                        shutil.copyfile(filter_file_path, filter_file_path_dst)
+                            # use stdout and answer as two argv of filter file, then perform filtering
+                            # TODO: may need to be changed ...
+                            if (filter_file_path is not None and filter_file_path != '') and \
+                                    (filter_command is not None and filter_command != ''):
+                                try:
+                                    # copy filter file to student dir
+                                    filter_filename = os.path.basename(filter_file_path)
+                                    filter_file_path_dst = os.path.join(os.path.dirname(code_filepath), filter_filename)
+                                    with open(filter_file_path_dst, 'w'):
+                                        pass
+                                    shutil.copyfile(filter_file_path, filter_file_path_dst)
 
-                                        os.chdir(os.path.dirname(filter_file_path_dst))
-                                        output = replace_whitespace_with_underscore(output.decode('utf-8')).encode('utf-8')
-                                        answer = replace_whitespace_with_underscore(answer.decode('utf-8')).encode('utf-8')
-                                        command: str = (filter_command + " %s %s") % (output.decode('utf-8'), answer.decode('utf-8'))
-                                        filter_proc = Popen(command, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=True)
-                                        stdout, stderr = filter_proc.communicate()
-                                        output, answer = stdout.decode('utf-8').split(' ')
-                                    except Exception as e:
-                                        print(e)
+                                    os.chdir(os.path.dirname(filter_file_path_dst))
+                                    output = replace_whitespace_with_underscore(output.decode('utf-8')).encode('utf-8')
+                                    answer = replace_whitespace_with_underscore(answer.decode('utf-8')).encode('utf-8')
+                                    command: str = (filter_command + " %s %s") % (output.decode('utf-8'), answer.decode('utf-8'))
+                                    filter_proc = Popen(command, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=True)
+                                    stdout, stderr = filter_proc.communicate()
+                                    output, answer = stdout.decode('utf-8').split(' ')
+                                except Exception as e:
+                                    print(e)
 
-                                if compare_output_with_answer(str(output), str(answer)):
-                                    # custom test success
-                                    curr_marks = curr_marks + test_marks
-                                    result_msg += "%s: %d/%d</br>" % (test_tag, test_marks, test_marks)
-                                else:
-                                    # custom test failed
-                                    result_msg += "%s: %d/%d</br>" % (test_tag, 0, test_marks)
-                                    test_marks = 0
+                            if compare_output_with_answer(str(output), str(answer)):
+                                # custom test success
+                                curr_marks = curr_marks + test_marks
+                                result_msg += "%s: %d/%d</br> " % (test_tag, test_marks, test_marks)
+                            else:
+                                # custom test failed
+                                result_msg += "%s: %d/%d</br> " % (test_tag, 0, test_marks)
+                                test_marks = 0
 
                             vars_data[key] = test_marks
 
@@ -458,11 +460,11 @@ def getExecResult(name, sock):
                     attemptsLeft = 0
             with open(vars_filepath, 'w') as f:
                 yaml.dump(vars_data, f)
-            result_msg += "\n\nYou have %s attempts left\n\n" % str(attemptsLeft)
+            result_msg += "</br>You have %s attempts left</br> " % str(attemptsLeft)
 
             # apply penalty
             curr_marks = curr_marks - int(penalty)
-            result_msg += "\n\nPenalty: %s\n\n" % str(penalty)
+            result_msg += "</br>Penalty: %s</br> " % str(penalty)
 
             if curr_marks < 0:
                 curr_marks = 0
@@ -474,7 +476,7 @@ def getExecResult(name, sock):
                 vars_data2["marks"] = curr_marks
             with open(vars_filepath, 'w') as f:
                 yaml.dump(vars_data2, f)
-            result_msg += "\n\nTotal marks: %s\n\n" % str(curr_marks)
+            result_msg += "</br>Total marks: %s</br> " % str(curr_marks)
     else:
         result_msg = "Sorry, you have no attempts left for this assignment!"
 
