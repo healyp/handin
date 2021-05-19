@@ -51,11 +51,11 @@ class FileServerCommands:
     UPDATE_DEFINITIONS_FILE = "update_definitions_file"
     GET_DEFINITIONS_FILE = "get_definitions_file"
     GET_PARAMS = "get_params"
-    FILE_SAVE = "file_save"
+    CLONE_ASSIGNMENT = "clone_assignment"
     UPLOAD_FILE = "upload_file" # The path to the file should be a relative path as the server will prepend ROOTDIR to it
     VALID_COMMANDS = [AUTHENTICATE_LECTURER, ALERT_MAC_ADDRESS, TRUST_MAC_ADDRESS, GET_LECTURER_MODULES, MODULE_INFO
                      , GET_VARS, CHECK_EXISTS, CREATE_WEEK_DIRECTORY, UPDATE_PARAMS_FILE, CREATE_DEFINITIONS_FILE
-                     , UPDATE_DEFINITIONS_FILE, GET_DEFINITIONS_FILE, GET_PARAMS, FILE_SAVE, UPLOAD_FILE]
+                     , UPDATE_DEFINITIONS_FILE, GET_DEFINITIONS_FILE, GET_PARAMS, CLONE_ASSIGNMENT, UPLOAD_FILE]
 
     @staticmethod
     def validateCommand(command):

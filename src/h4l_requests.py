@@ -790,16 +790,17 @@ def getParams(module, assignment):
 
     return "", "", error
 
-def saveFile(module, assignment):
+def cloneAssignment(module, assignment, content):
     global s
     try:
         if setSocket():
             args = {
                 'module': module,
-                'assignment': assignment
+                'assignment': assignment,
+                'content': content
             }
 
-            response = request(Request(s, FileServerCommands.FILE_SAVE, args))
+            response = request(Request(s, FileServerCommands.CLONE_ASSIGNMENT, args))
 
             if response is not None:
                 if not response.disconnected:
@@ -807,7 +808,7 @@ def saveFile(module, assignment):
                         return False
                     else:
                         error = True
-                        doError(f"A server error occurred saving file: {response.message}")
+                        doError(f"Error: {response.message}")
                 else:
                     s = None
                     error = True

@@ -1,6 +1,9 @@
 import re
 import sys
 import logging
+
+import yaml
+
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import QDate, QRegExp, QDateTime
 from PyQt5.QtGui import QRegExpValidator
@@ -843,7 +846,7 @@ class CloneAssignmentDialog(QDialog, Ui_Dialog_Clone_Assignment):
 #        self.comboBox_assignments.currentTextChanged.connect(self.update_table)
             self.textEdit_showFileContent.setReadOnly(False)
             self.checkBox_clone.stateChanged.connect(
-            lambda: self.file_save(self))
+            lambda: self.clone_assignment())
 
     def display(self):
         content, filename, error = getParams(module, self.comboBox_assignments.currentText())
@@ -851,28 +854,27 @@ class CloneAssignmentDialog(QDialog, Ui_Dialog_Clone_Assignment):
             self.textEdit_showFileContent.setText(content)
             self.submit_filepath = filename
 
-    def file_save(self, check_box):
-        saveFile(module, self.lineEdit_assName.text().strip())
+    def clone_assignment(self):
+        if self.checkBox_clone.isChecked():
+            assignment_name = self.lineEdit_assName.text().strip()
 
+            if assignment_name != "":
+                contents = self.validateYaml()
+                if contents is not None:
+                    if not cloneAssignment(module, assignment_name, contents):
+                        create_message_box("Assignment cloned successfully")
 
-    # TODO cloning may need to be implemented, doesn't seem to be done here
+    def validateYaml(self):
+        contents = self.textEdit_showFileContent.toPlainText()
 
-    # def clone_assignment(self, check_box):
-    #     module_code: str = "cs4455"
-    #     #self.lineEdit_moduleCode.text().strip()
-    #     assName: str = self.lineEdit_assName.text().strip()
-    #     assClone: str = self.comboBox_assignments.currentText()
-    #     if check_if_ass_exists(module_code, "curr", assName):
-    #             create_message_box(f"Assignment {assName} instance in {module_code} in {ay} already exists!")
-    #             return
-
-    #     assClonePath = assPath(module_code, "curr", assClone)
-    #     newAssPath = os.path.join(ROOTDIR + "/" + module_code + "/curr/assignments/" + assName)
-
-    #     os.mkdir(newAssPath)
-
-    #     copyCommand = "cp " + assClonePath + "/params.yaml " + newAssPath
-    #     os.system(copyCommand)
+        try:
+            yaml.safe_load(contents)
+            # if loaded without throwing exception, it's ok
+            return contents
+        except yaml.YAMLError as err:
+            err = format_exc()
+            create_message_box(f"The entered assignment parameters are not valid: {err}")
+            return None
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
