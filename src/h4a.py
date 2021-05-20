@@ -137,7 +137,7 @@ class AccessRightsDialog(QDialog, Ui_Dialog_Access_Rights):
         self.setupUi(self)
         self.addButton.clicked.connect(self.add_access_rights)
         self.addButton.setEnabled(False)
-        self.lecturerEdit.textChanged.connect(self.disable_add_button)
+        self.userEdit.textChanged.connect(self.disable_add_button)
         self.modulesBox.currentTextChanged.connect(self.disable_add_button)
         self.modulesBox.addItems([AccessRightsDialog.CHOOSE_MODULE])
         self.removeAccess.stateChanged.connect(self.remove_access_rights_combo)
@@ -156,20 +156,20 @@ class AccessRightsDialog(QDialog, Ui_Dialog_Access_Rights):
             self.addButton.setText("Add Access")
 
     def disable_add_button(self):
-        lecturer = self.lecturerEdit.text().strip()
+        user = self.userEdit.text().strip()
         module = self.modulesBox.currentText().strip()
-        self.addButton.setEnabled(lecturer != "" and module != AccessRightsDialog.CHOOSE_MODULE)
+        self.addButton.setEnabled(user != "" and module != AccessRightsDialog.CHOOSE_MODULE)
 
     def load_modules(self):
         modules = [f.upper() for f in os.listdir(ROOTDIR) if re.match(ModCodeRE, f)]
         if len(modules) > 0:
             self.modulesBox.addItems(modules)
 
-    def lecturer_exists(self, lecturer):
+    def user_exists(self, user):
         path = ROOTDIR + "/users"
-        found_lecturers = [f for f in os.listdir(path) if f == lecturer]
+        found_users = [f for f in os.listdir(path) if f == user]
 
-        return len(found_lecturers) != 0
+        return len(found_users) != 0
 
     def get_current_access_lines(self):
         path = ROOTDIR + "/access_rights.txt"
@@ -182,52 +182,52 @@ class AccessRightsDialog(QDialog, Ui_Dialog_Access_Rights):
         return lines
 
     def add_access_rights(self):
-        self.lecturer_error.setText("")
+        self.user_error.setText("")
         self.error_message.setText("")
-        lecturer = self.lecturerEdit.text().strip()
+        user = self.userEdit.text().strip()
         module = self.modulesBox.currentText().strip().lower()
 
-        if self.lecturer_exists(lecturer):
+        if self.user_exists(user):
             path = ROOTDIR + "/access_rights.txt"
 
             try:
-                lecturer_found = False
+                user_found = False
                 error_occurred = False
 
                 lines = self.get_current_access_lines()
 
                 with open(path, 'w+') as f:
                     for ln in lines:
-                        if ln.startswith(lecturer):
-                            lecturer_found = True
+                        if ln.startswith(user):
+                            user_found = True
                             data = ln.split()
                             if module not in data[1:]:
                                 ln = f"{ln} {module}"
                             else:
                                 error_occurred = True
-                                self.error_message.setText("The lecturer already has access")
+                                self.error_message.setText("The user already has access")
                         else:
                             ln = f"{ln}"
                         f.write(ln + "\n")
 
-                    if not lecturer_found:
-                        f.write(f"{lecturer} {module}")
+                    if not user_found:
+                        f.write(f"{user} {module}")
 
                 if not error_occurred:
-                    create_message_box(f"Lecturer {lecturer} given access to module {module.upper()}")
+                    create_message_box(f"User {user} given access to module {module.upper()}")
             except Exception as e:
                 print(e)
                 self.error_message.setText("An error occurred, try again")
         else:
-            self.lecturer_error.setText("Lecturer does not exist")
+            self.user_error.setText("User does not exist")
 
     def remove_access_rights(self):
-        self.lecturer_error.setText("")
+        self.user_error.setText("")
         self.error_message.setText("")
-        lecturer = self.lecturerEdit.text().strip()
+        user = self.userEdit.text().strip()
         module = self.modulesBox.currentText().strip().lower()
 
-        if self.lecturer_exists(lecturer):
+        if self.user_exists(user):
             path = ROOTDIR + "/access_rights.txt"
 
             try:
@@ -238,9 +238,9 @@ class AccessRightsDialog(QDialog, Ui_Dialog_Access_Rights):
 
                 with open(path, 'w+') as f:
                     for ln in lines:
-                        if ln.startswith(lecturer):
+                        if ln.startswith(user):
                             data = ln.split()
-                            ln = f"{lecturer} "
+                            ln = f"{user} "
                             for m in data[1:]:
                                 m = m.strip()
                                 if m != module:
@@ -249,18 +249,18 @@ class AccessRightsDialog(QDialog, Ui_Dialog_Access_Rights):
                                     module_found = True
                             if not module_found:
                                 error_occurred = True
-                                self.error_message.setText("The lecturer does not have access")
+                                self.error_message.setText("The user does not have access")
                         else:
                             ln = f"{ln}"
                         f.write(ln + "\n")
 
                 if not error_occurred:
-                    create_message_box(f"Access to module {module.upper()} removed from lecturer {lecturer}")
+                    create_message_box(f"Access to module {module.upper()} removed from user {user}")
             except Exception as e:
                 print(e)
                 self.error_message.setText("An error occurred, try again")
         else:
-            self.lecturer_error.setText("Lecturer does not exist")
+            self.user_error.setText("User does not exist")
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)

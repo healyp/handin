@@ -12,7 +12,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
-        Dialog.setObjectName("Dialog") 
+        Dialog.setObjectName("Dialog")
         Dialog.resize(700, 500)
         Dialog.setMinimumSize(QtCore.QSize(700, 600))
         Dialog.setMaximumSize(QtCore.QSize(700, 600))
@@ -57,6 +57,12 @@ class Ui_Dialog(object):
         self.checkBox_clone = QtWidgets.QCheckBox(self.frame)
         self.checkBox_clone.setGeometry(QtCore.QRect(40, 430, 300, 19))
         self.checkBox_clone.setObjectName("checkBox_clone")
+        self.checkBox_edit = QtWidgets.QCheckBox(self.frame)
+        self.checkBox_edit.setGeometry(QtCore.QRect(230, 430, 300, 19))
+        self.checkBox_edit.setObjectName("checkBox_edit")
+        self.checkBox_delete = QtWidgets.QCheckBox(self.frame)
+        self.checkBox_delete.setGeometry(QtCore.QRect(410, 430, 300, 19))
+        self.checkBox_delete.setObjectName("checkBox_delete")
 
         self.retranslateUi(Dialog)
         self.buttonBox.accepted.connect(Dialog.accept)
@@ -65,9 +71,11 @@ class Ui_Dialog(object):
 
     def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
-        Dialog.setWindowTitle(_translate("Dialog", "Clone Previous Assignment"))
+        Dialog.setWindowTitle(_translate("Dialog", "View Assignment"))
         self.label.setText(_translate("Dialog", "Assignment:"))
         self.label_2.setText(_translate("Dialog", "New Assignment:"))
         self.pushButton_show.setText(_translate("MainWindow", "Show"))
-        self.label_3.setText(_translate("Dialog", "Details of assignment to clone:"))
+        self.label_3.setText(_translate("Dialog", "Details of assignment:"))
         self.checkBox_clone.setText(_translate("Dialog", "Clone this assignment"))
+        self.checkBox_edit.setText(_translate("Dialog", "Edit this assignment"))
+        self.checkBox_delete.setText(_translate("Dialog", "Delete this assignment"))

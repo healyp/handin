@@ -23,7 +23,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Lecturer:</string>
+    <string>User:</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_2">
@@ -39,7 +39,7 @@
     <string>Module:</string>
    </property>
   </widget>
-  <widget class="QLineEdit" name="lecturerEdit">
+  <widget class="QLineEdit" name="userEdit">
    <property name="geometry">
     <rect>
      <x>130</x>
@@ -59,7 +59,7 @@
     </rect>
    </property>
   </widget>
-  <widget class="QLabel" name="lecturer_error">
+  <widget class="QLabel" name="user_error">
    <property name="geometry">
     <rect>
      <x>130</x>

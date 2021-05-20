@@ -48,4 +48,4 @@ class Ui_Dialog(object):
         self.pushButton_2.setText(_translate("Dialog", "Create One-Off Assignment"))
         self.pushButton_3.setText(_translate("Dialog", "Create Repeating Assignment"))
         self.pushButton_4.setText(_translate("Dialog", "Create Definitions"))
-        self.pushButton_5.setText(_translate("Dialog", "Clone Assignment"))
+        self.pushButton_5.setText(_translate("Dialog", "View Assignment"))

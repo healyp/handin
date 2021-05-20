@@ -428,7 +428,7 @@ def get_vars(module, week_number, student_id):
         error = True
 
     return {}, error
-    
+
 def checkModuleExists(module):
     global s
     try:
@@ -763,6 +763,43 @@ def cloneAssignment(module, assignment, content):
                     else:
                         error = True
                         doError(f"Error: {response.message}")
+                else:
+                    s = None
+                    error = True
+                    if response.error:
+                        logging.error(f"Response Error: {response.error_message}")
+            else:
+                s = None
+                error = True
+                if request.error:
+                    logging.error(f"Request Error: {request.error_message}")
+        else:
+            error = True
+    except (MessagingError) as m:
+        s = None
+        doError(f"{m}")
+        error = True
+
+    return error
+
+def deleteAssignment(module, assignment):
+    global s
+    try:
+        if setSocket():
+            args = {
+                'module': module,
+                'assignment': assignment,
+            }
+
+            response = request(Request(s, FileServerCommands.DELETE_ASSIGNMENT, args))
+
+            if response is not None:
+                if not response.disconnected:
+                    if response.success == "True":
+                        return False
+                    else:
+                        error = True
+                        doError(f"Server Error: {response.message}")
                 else:
                     s = None
                     error = True

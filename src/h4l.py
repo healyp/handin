@@ -18,7 +18,7 @@ from ui.impl.create_repeat_assignments_dialog import Ui_Dialog as Ui_Dialog_Crea
 from ui.impl.handin_lecturer_dialog import Ui_Dialog as Ui_Dialog_main
 from ui.impl.manage_student_marks_dialog import Ui_Dialog as Ui_Dialog_Manage_Student_Marks
 from ui.impl.create_definitions_dialog import Ui_Dialog as Ui_Dialog_Create_Definitions
-from ui.impl.clone_previous_assignment_dialog import Ui_Dialog as Ui_Dialog_Clone_Assignment
+from ui.impl.view_assignment_dialog import Ui_Dialog as Ui_Dialog_View_Assignment
 from ui.impl.handin_lecturer_login import Ui_MainWindow as Ui_MainWindow_Lecturer_Login
 from ui.impl.handin_lecturer_dialog import Ui_Dialog as Ui_Main_Lecturer_Dialog
 from ui.impl.pick_module_dialog import Ui_Dialog as Ui_Dialog_pick_module
@@ -174,7 +174,7 @@ class MainLecturerDialog(QDialog, Ui_Main_Lecturer_Dialog):
         dialog.show()
 
     def clone_assignment(self):
-        dialog = CloneAssignmentDialog(self)
+        dialog = ViewAssignmentDialog(self)
         dialog.show()
 
 
@@ -306,7 +306,7 @@ def map_tests_path(params_path, test_name, path, file):
     return server_directory_full, server_directory_relative, server_file_name
 
 class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, existing_assignment: dict = None, assignment_path: str = None):
         super(CreateOneOffAssignmentDialog, self).__init__(parent)
         self.setupUi(self)
         self.label_module.setText(module)
@@ -316,85 +316,127 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         self.dateTimeEdit_startDay.setDateTime(QDateTime.currentDateTime())
         self.dateTimeEdit_endDay.setDateTime(QDateTime.currentDateTime())
         self.dateTimeEdit_cutoffDay.setDateTime(QDateTime.currentDateTime())
-        # only allow Integers for PenaltyPerDay and totalAttempts
-        # self.lineEdit_penaltyPerDay.setPlaceholderText('0')
-        # self.lineEdit_penaltyPerDay.setValidator(QRegExpValidator(regex))
-        # self.lineEdit_totalAttempts.setValidator(QRegExpValidator(regex))
         self.spinBox_penaltyPerDay.setValue(7)
         self.spinBox_totalAttempts.setValue(10)
         regex = QRegExp("\\d+")
         self.lineEdit_attendance_marks.setValidator(QRegExpValidator(regex))
         self.lineEdit_compilation_marks.setValidator(QRegExpValidator(regex))
-        self.lineEdit_test1_marks.setValidator(QRegExpValidator(regex))
-        self.lineEdit_test2_marks.setValidator(QRegExpValidator(regex))
-        self.lineEdit_test3_marks.setValidator(QRegExpValidator(regex))
-        self.lineEdit_test4_marks.setValidator(QRegExpValidator(regex))
-        self.accepted.connect(lambda: self.createOneOffAssignment())
-        self.buttonBox.setEnabled(False)
-        # self.comboBox_moduleCode.editTextChanged.connect(self.disable_buttonbox)
-        # register listeners for all line edits
-        for line_edit in self.findChildren(QLineEdit):
-            if line_edit != self.lineEdit_assName:
-                line_edit.textChanged.connect(self.disable_buttonbox)
-        # register listeners for all group boxes
-        for group_box in self.findChildren(QGroupBox):
-            group_box.toggled.connect(self.disable_buttonbox)
-            group_box.toggled.connect(self.update_total_marks)
-            group_box.toggled.connect(self.disable_groupbox)
+        self.lineEdit_marks.setValidator(QRegExpValidator(regex))
+        self.create.clicked.connect(lambda: self.createOneOffAssignment())
+        self.cancel.clicked.connect(lambda: self.close())
         self.lineEdit_attendance_marks.textChanged.connect(self.update_total_marks)
         self.lineEdit_compilation_marks.textChanged.connect(self.update_total_marks)
-        self.lineEdit_test1_marks.textChanged.connect(self.update_total_marks)
-        self.lineEdit_test2_marks.textChanged.connect(self.update_total_marks)
-        self.lineEdit_test3_marks.textChanged.connect(self.update_total_marks)
-        self.lineEdit_test4_marks.textChanged.connect(self.update_total_marks)
-        # set up initial available module codes
-        # self.comboBox_moduleCode.addItems(getModuleCodes())
-        # set up week numbers
-        # self.comboBox_weekNumber.addItems(["w01", "w02", "w03", "w04", "w05", "w06",
-        #                                 "w07", "w08", "w09", "w10", "w11", "w12", "w13"])
-        self.groupBox_customTest1.setCheckable(False)
-        self.groupBox_customTest1.setChecked(True)
-        self.checkBox_test1_inputDataFile.stateChanged.connect(
-            lambda: self.add_file_with_check_box(self.checkBox_test1_inputDataFile, self.label_test1_inputDataFile))
-        self.checkBox_test2_inputDataFile.stateChanged.connect(
-            lambda: self.add_file_with_check_box(self.checkBox_test2_inputDataFile, self.label_test2_inputDataFile))
-        self.checkBox_test3_inputDataFile.stateChanged.connect(
-            lambda: self.add_file_with_check_box(self.checkBox_test3_inputDataFile, self.label_test3_inputDataFile))
-        self.checkBox_test4_inputDataFile.stateChanged.connect(
-            lambda: self.add_file_with_check_box(self.checkBox_test4_inputDataFile, self.label_test4_inputDataFile))
+        self.checkBox_inputDataFile.stateChanged.connect(
+            lambda: self.add_file_with_check_box(self.checkBox_inputDataFile, self.label_inputDataFile))
 
-        self.checkBox_test1_answerFile.stateChanged.connect(
-            lambda: self.add_file_with_check_box(self.checkBox_test1_answerFile, self.label_test1_answerFile))
-        self.checkBox_test2_answerFile.stateChanged.connect(
-            lambda: self.add_file_with_check_box(self.checkBox_test2_answerFile, self.label_test2_answerFile))
-        self.checkBox_test3_answerFile.stateChanged.connect(
-            lambda: self.add_file_with_check_box(self.checkBox_test3_answerFile, self.label_test3_answerFile))
-        self.checkBox_test4_answerFile.stateChanged.connect(
-            lambda: self.add_file_with_check_box(self.checkBox_test4_answerFile, self.label_test4_answerFile))
+        self.checkBox_answerFile.stateChanged.connect(
+            lambda: self.add_file_with_check_box(self.checkBox_answerFile, self.label_answerFile))
 
-        self.checkBox_test1_filterFile.stateChanged.connect(
-            lambda: self.add_file_with_check_box(self.checkBox_test1_filterFile, self.label_test1_filterFile,
-                                                 is_filter=True, filter_line_edit=self.lineEdit_test1_filterCommand))
-        self.checkBox_test2_filterFile.stateChanged.connect(
-            lambda: self.add_file_with_check_box(self.checkBox_test2_filterFile, self.label_test2_filterFile,
-                                                 is_filter=True, filter_line_edit=self.lineEdit_test2_filterCommand))
-        self.checkBox_test3_filterFile.stateChanged.connect(
-            lambda: self.add_file_with_check_box(self.checkBox_test3_filterFile, self.label_test3_filterFile,
-                                                 is_filter=True, filter_line_edit=self.lineEdit_test3_filterCommand))
-        self.checkBox_test4_filterFile.stateChanged.connect(
-            lambda: self.add_file_with_check_box(self.checkBox_test4_filterFile, self.label_test4_filterFile,
-                                                 is_filter=True, filter_line_edit=self.lineEdit_test4_filterCommand))
+        self.checkBox_filterFile.stateChanged.connect(
+            lambda: self.add_file_with_check_box(self.checkBox_filterFile, self.label_filterFile,
+                                                 is_filter=True, filter_line_edit=self.lineEdit_filterCommand))
+
+        self.addTest.clicked.connect(self.addTestPressed)
+        self.addTest.setEnabled(False)
+        self.editButton.clicked.connect(lambda: self.editTestClicked())
+        self.removeButton.clicked.connect(lambda: self.removeTest())
 
         self.weekNumber_comboBox.addItems(["w01", "w02", "w03", "w04", "w05", "w06", "w07", "w07", "w08", "w09", "w10", "w11", "w12", "w13"])
+        self.lineEdit_filterCommand.setDisabled(True)
 
-        self.lineEdit_test1_filterCommand.setDisabled(True)
-        self.lineEdit_test2_filterCommand.setDisabled(True)
-        self.lineEdit_test3_filterCommand.setDisabled(True)
-        self.lineEdit_test4_filterCommand.setDisabled(True)
-        self.checkBox_test1_filterFile.stateChanged.connect(self.disable_buttonbox)
-        self.checkBox_test2_filterFile.stateChanged.connect(self.disable_buttonbox)
-        self.checkBox_test3_filterFile.stateChanged.connect(self.disable_buttonbox)
-        self.checkBox_test4_filterFile.stateChanged.connect(self.disable_buttonbox)
+        for groupBox in self.findChildren(QGroupBox):
+            groupBox.toggled.connect(self.disable_create_button)
+
+        for lineEdit in self.findChildren(QLineEdit):
+            lineEdit.textChanged.connect(self.disable_create_button)
+
+        for lineEdit in self.groupBox_customTest1.findChildren(QLineEdit):
+            lineEdit.textChanged.connect(self.disable_test_button)
+
+        self.create.setEnabled(False)
+
+        self.tests = {}
+        self.test_number = 0
+
+        self.existing_assignment = existing_assignment
+        self.assignment_path = assignment_path
+        self.loadFromExisting()
+
+    def loadExistingTests(self, tests: dict):
+        self.tests = tests
+        if 'attendance' in tests:
+            attendance = tests['attendance']
+            self.groupBox_attendance.setChecked(True)
+            if 'tag' in attendance:
+                self.lineEdit_attendance_tag.setText(attendance['tag'])
+            if 'marks' in attendance:
+                self.lineEdit_attendance_marks.setText(str(attendance['marks']))
+
+        if 'compilation' in tests:
+            compilation = tests['compilation']
+            self.groupBox_compilation.setChecked(True)
+            if 'tag' in compilation:
+                self.lineEdit_compilation_tag.setText(compilation['tag'])
+            if 'marks' in compilation:
+                self.lineEdit_compilation_marks.setText(str(compilation['marks']))
+            if 'command' in compilation:
+                self.lineEdit_compilation_command.setText(compilation['command'])
+
+        self.reorderTests()
+
+    def loadFromExisting(self):
+        if self.existing_assignment is not None and self.assignment_path is not None:
+            name = os.path.basename(os.path.dirname(self.assignment_path))
+            self.lineEdit_assName.setText(name)
+            data = self.existing_assignment
+            if 'weekNumber' in data:
+                self.weekNumber_comboBox.setCurrentText(data['weekNumber'])
+            if 'startDay' in data:
+                self.dateTimeEdit_startDay.setDateTime(QDateTime.fromString(data['startDay'], "yyyy-MM-dd HH:mm"))
+            if 'endDay' in data:
+                self.dateTimeEdit_endDay.setDateTime(QDateTime.fromString(data['endDay'], "yyyy-MM-dd HH:mm"))
+            if 'cutoffDay' in data:
+                self.dateTimeEdit_cutoffDay.setDateTime(QDateTime.fromString(data['cutoffDay'], "yyyy-MM-dd HH:mm"))
+            if 'totalAttempts' in data:
+                self.spinBox_totalAttempts.setValue(data['totalAttempts'])
+            if 'penaltyPerDay' in data:
+                self.spinBox_penaltyPerDay.setValue(data['penaltyPerDay'])
+            if 'collectionFilename' in data:
+                self.lineEdit_collectFilename.setText(data['collectionFilename'])
+            if 'tests' in data:
+                self.loadExistingTests(data['tests'])
+
+            self.setWindowTitle("Edit Assignment")
+            self.create.setText("Save")
+            self.update_total_marks()
+
+    def num_tests(self):
+        i = 0
+        for key, value in self.tests.items():
+            if key.startswith("test"):
+                i += 1
+
+        return i
+
+    def disable_create_button(self):
+        disable = False
+
+        if self.num_tests() == 0:
+            for lineEdit in self.findChildren(QLineEdit):
+                if lineEdit != self.lineEdit_assName and lineEdit.text().strip() == "" and lineEdit.isEnabled():
+                    disable = True
+                    break
+
+        self.create.setEnabled(not disable)
+
+    def disable_test_button(self):
+        disable = False
+        for lineEdit in self.groupBox_customTest1.findChildren(QLineEdit):
+            if lineEdit.text().strip() == "" and lineEdit.isEnabled():
+                disable = True
+                break
+
+        self.addTest.setEnabled(not disable)
 
     def add_file_with_check_box(self, check_box, label, is_filter=False, filter_line_edit=None):
         """add data/answer/filter file with check box -- signal"""
@@ -411,37 +453,151 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
             if filter_line_edit is not None:
                 filter_line_edit.setEnabled(False)
 
-    def disable_buttonbox(self):
-        """disable button box -- signal"""
-        self.buttonBox.setEnabled(True)
-        line_edits: list = [le for le in self.findChildren(QLineEdit)]
-        for line_edit in line_edits:
-            if line_edit.isEnabled() and line_edit != self.lineEdit_assName:
-                if not len(line_edit.text()) > 0:
-                    self.buttonBox.setEnabled(False)
-                    return
+    def silentCheckBox(self, checkBox):
+        checkBox.blockSignals(True)
+        checkBox.setChecked(True)
+        checkBox.blockSignals(False)
+
+    def clearTestForm(self):
+        self.lineEdit_tag.clear()
+        self.lineEdit_marks.clear()
+        self.lineEdit_command.clear()
+        self.lineEdit_filterCommand.clear()
+        self.label_inputDataFile.setText("")
+        self.label_answerFile.setText("")
+        self.label_filterFile.setText("")
+        self.checkBox_answerFile.setChecked(False)
+        self.checkBox_inputDataFile.setChecked(False)
+        self.checkBox_filterFile.setChecked(False)
+
+    def addTestPressed(self):
+        tag = self.lineEdit_tag.text().strip()
+        marks = self.lineEdit_marks.text().strip()
+        if marks != "":
+            marks = int(marks)
+        command = self.lineEdit_command.text().strip()
+        inputDataFile = self.label_inputDataFile.text().strip()
+        answerFile = self.label_answerFile.text().strip()
+        filterFile = self.label_filterFile.text().strip()
+        filterCommand = self.lineEdit_filterCommand.text().strip()
+        self.test_number += 1
+        self.tests[f"test{self.test_number}"] = {"tag": tag, "marks": marks, "command": command, "inputDataFile": inputDataFile,
+                          "answerFile": answerFile, "filterFile": filterFile, "filterCommand": filterCommand}
+        self.testList.addItem(f"test{self.test_number} = Tag: {tag}, Marks: {marks}, Command: {command}")
+        self.clearTestForm()
+        self.update_total_marks()
+
+    def editTest(self):
+        itemChosenWidget = self.testList.currentItem()
+
+        if itemChosenWidget is not None:
+            itemChosen = itemChosenWidget.text()
+            equalsIndex = itemChosen.index("=")
+            test_key = itemChosen[0:equalsIndex - 1]
+            test = self.tests[test_key]
+
+            tag = self.lineEdit_tag.text().strip()
+            marks = self.lineEdit_marks.text().strip()
+            if marks != "":
+                marks = int(marks)
+            command = self.lineEdit_command.text().strip()
+            inputDataFile = self.label_inputDataFile.text().strip()
+            answerFile = self.label_answerFile.text().strip()
+            filterFile = self.label_filterFile.text().strip()
+            filterCommand = self.lineEdit_filterCommand.text().strip()
+            self.tests[test_key] = {"tag": tag, "marks": marks, "command": command, "inputDataFile": inputDataFile,
+                              "answerFile": answerFile, "filterFile": filterFile, "filterCommand": filterCommand}
+            itemChosenWidget.setText(f"{test_key} = Tag: {tag}, Marks: {marks}, Command: {command}")
+            self.testList.setEnabled(True)
+            self.addTest.setText("Add Test")
+            self.label_19.setText("Add Test:")
+            self.addTest.clicked.disconnect(self.editTest)
+            self.addTest.clicked.connect(self.addTestPressed)
+            self.clearTestForm()
+            self.update_total_marks()
+
+    def editTestClicked(self):
+        itemChosen = self.testList.currentItem()
+
+        if itemChosen is not None:
+            self.testList.setEnabled(False)
+            itemChosen = itemChosen.text()
+            equalsIndex = itemChosen.index("=")
+            test_key = itemChosen[0:equalsIndex - 1]
+            test = self.tests[test_key]
+            self.lineEdit_tag.setText(test["tag"])
+            self.lineEdit_marks.setText(str(test["marks"]))
+            self.lineEdit_command.setText(test["command"])
+            filter_command = test["filterCommand"]
+            if filter_command != "":
+                self.lineEdit_filterCommand.setText(filter_command)
+
+            inputFile = test["inputDataFile"]
+            if inputFile != "":
+                self.label_inputDataFile.setText(inputFile)
+                self.silentCheckBox(self.checkBox_inputDataFile)
+
+            answerFile = test["answerFile"]
+            if answerFile != "":
+                self.label_answerFile.setText(answerFile)
+                self.silentCheckBox(self.checkBox_answerFile)
+
+            filterFile = test["filterFile"]
+            if filterFile != "":
+                self.label_filterFile.setText("")
+                self.silentCheckBox(self.checkBox_filterFile)
+
+            self.label_19.setText("Edit Test:")
+            self.addTest.setText("Edit Test")
+            self.addTest.clicked.disconnect(self.addTestPressed)
+            self.addTest.clicked.connect(self.editTest)
+
+    def reorderTests(self):
+        new_map = {}
+
+        i = 1
+        self.testList.clear()
+        for key, value in self.tests.items():
+            if key.startswith("test"):
+                new_key = key[0:len("test")] + str(i)
+                i += 1
+                new_map[new_key] = value
+                self.testList.addItem(f"{new_key} = Tag: {value['tag']}, Marks: {str(value['marks'])}, Command: {value['command']}")
+            else:
+                new_map[key] = value # in case the test is compilation or attendance
+
+        self.tests = new_map
+        self.test_number = i - 1
+
+    def removeTest(self):
+        itemChosenWidget = self.testList.currentItem()
+
+        if itemChosenWidget is not None:
+            itemChosen = itemChosenWidget.text()
+            equalsIndex = itemChosen.index("=")
+            test_key = itemChosen[0:equalsIndex - 1]
+            self.testList.takeItem(self.testList.currentRow())
+            self.tests.pop(test_key)
+            self.reorderTests()
+            self.testList.setEnabled(True)
+            self.update_total_marks()
+            self.disable_create_button()
 
     def update_total_marks(self):
         """update total marks -- signal"""
         total_marks: int = self.get_total_marks()
         self.label_totalMarks.setText(str(total_marks))
 
-    def disable_groupbox(self):
-        """disable group box -- signal,"""
-        if not self.groupBox_customTest2.isChecked():
-            self.groupBox_customTest3.setChecked(False)
-            self.groupBox_customTest4.setChecked(False)
-        if not self.groupBox_customTest3.isChecked():
-            self.groupBox_customTest4.setChecked(False)
-
     def get_total_marks(self) -> int:
         attendance = int(self.lineEdit_attendance_marks.text()) if len(self.lineEdit_attendance_marks.text()) > 0 and self.groupBox_attendance.isChecked() else 0
         compilation = int(self.lineEdit_compilation_marks.text()) if len(self.lineEdit_compilation_marks.text()) > 0 and self.groupBox_compilation.isChecked() else 0
-        test1 = int(self.lineEdit_test1_marks.text()) if len(self.lineEdit_test1_marks.text()) > 0 else 0
-        test2 = int(self.lineEdit_test2_marks.text()) if len(self.lineEdit_test2_marks.text()) > 0 and self.groupBox_customTest2.isChecked() else 0
-        test3 = int(self.lineEdit_test3_marks.text()) if len(self.lineEdit_test3_marks.text()) > 0 and self.groupBox_customTest3.isChecked() else 0
-        test4 = int(self.lineEdit_test4_marks.text()) if len(self.lineEdit_test4_marks.text()) > 0 and self.groupBox_customTest4.isChecked() else 0
-        return attendance + compilation + test1 + test2 + test3 + test4
+        marks_sum = attendance + compilation
+
+        for key, value in self.tests.items():
+            if key.startswith("test"):
+                marks_sum += value["marks"]
+
+        return marks_sum
 
     def createOneOffAssignment(self):
         # module_code = self.comboBox_moduleCode.currentText().strip()
@@ -456,64 +612,29 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         penalty_per_day = int(self.spinBox_penaltyPerDay.value())
         total_attempts = int(self.spinBox_totalAttempts.value())
         collection_filename = self.lineEdit_collectFilename.text().strip()
-        tests = {}
         if self.groupBox_attendance.isChecked():
             tag = self.lineEdit_attendance_tag.text().strip()
             marks = int(self.lineEdit_attendance_marks.text().strip())
-            tests["attendance"] = {"tag": tag, "marks": marks}
+            self.tests["attendance"] = {"tag": tag, "marks": marks}
         if self.groupBox_compilation.isChecked():
             tag = self.lineEdit_compilation_tag.text().strip()
             marks = int(self.lineEdit_compilation_marks.text().strip())
             command = self.lineEdit_compilation_command.text().strip()
-            tests["compilation"] = {"tag": tag, "marks": marks, "command": command}
-        tag = self.lineEdit_test1_tag.text().strip()
-        marks = int(self.lineEdit_test1_marks.text().strip())
-        command = self.lineEdit_test1_command.text().strip()
-        inputDataFile = self.label_test1_inputDataFile.text().strip()
-        answerFile = self.label_test1_answerFile.text().strip()
-        filterFile = self.label_test1_filterFile.text().strip()
-        filterCommand = self.lineEdit_test1_filterCommand.text().strip()
-        tests["test1"] = {"tag": tag, "marks": marks, "command": command, "inputDataFile": inputDataFile,
-                          "answerFile": answerFile, "filterFile": filterFile, "filterCommand": filterCommand}
-        if self.groupBox_customTest2.isChecked():
-            tag = self.lineEdit_test2_tag.text().strip()
-            marks = int(self.lineEdit_test2_marks.text().strip())
-            command = self.lineEdit_test2_command.text().strip()
-            inputDataFile = self.label_test2_inputDataFile.text().strip()
-            answerFile = self.label_test2_answerFile.text().strip()
-            filterFile = self.label_test2_filterFile.text().strip()
-            filterCommand = self.lineEdit_test2_filterCommand.text().strip()
-            tests["test2"] = {"tag": tag, "marks": marks, "command": command, "inputDataFile": inputDataFile,
-                              "answerFile": answerFile, "filterFile": filterFile, "filterCommand": filterCommand}
-        if self.groupBox_customTest3.isChecked():
-            tag = self.lineEdit_test3_tag.text().strip()
-            marks = int(self.lineEdit_test3_marks.text().strip())
-            command = self.lineEdit_test3_command.text().strip()
-            inputDataFile = self.label_test3_inputDataFile.text().strip()
-            answerFile = self.label_test3_answerFile.text().strip()
-            filterFile = self.label_test3_filterFile.text().strip()
-            filterCommand = self.lineEdit_test3_filterCommand.text().strip()
-            tests["test3"] = {"tag": tag, "marks": marks, "command": command, "inputDataFile": inputDataFile,
-                              "answerFile": answerFile, "filterFile": filterFile, "filterCommand": filterCommand}
-        if self.groupBox_customTest4.isChecked():
-            tag = self.lineEdit_test4_tag.text().strip()
-            marks = int(self.lineEdit_test4_marks.text().strip())
-            command = self.lineEdit_test4_command.text().strip()
-            inputDataFile = self.label_test4_inputDataFile.text().strip()
-            answerFile = self.label_test4_answerFile.text().strip()
-            filterFile = self.label_test4_filterFile.text().strip()
-            filterCommand = self.lineEdit_test4_filterCommand.text().strip()
-            tests["test4"] = {"tag": tag, "marks": marks, "command": command, "inputDataFile": inputDataFile,
-                              "answerFile": answerFile, "filterFile": filterFile, "filterCommand": filterCommand}
+            self.tests["compilation"] = {"tag": tag, "marks": marks, "command": command}
 
-        assignment_exists, error = checkAssignmentExists(module_code, const.whatAY(), assName)
+        if self.existing_assignment is not None:
+            assignment_exists = False
+            error = False # fool it into thinking the assignment doesn't exist
+            self.params_path = self.assignment_path
+        else:
+            assignment_exists, error = checkAssignmentExists(module_code, const.whatAY(), assName)
         if not error:
             if not assignment_exists:
-                if self.create_assignment_directory(module_code, assName):
+                if self.existing_assignment is not None or self.create_assignment_directory(module_code, assName):
                     self.update_params_file(
                         moduleCode=module_code, weekNumber=week_number, startDay=start_day,
                         endDay=end_day, cutoffDay=cutoff_day, penaltyPerDay=penalty_per_day,
-                        totalAttempts=total_attempts, collectionFilename=collection_filename, tests=tests)
+                        totalAttempts=total_attempts, collectionFilename=collection_filename, tests=self.tests)
             else:
                 create_message_box(f"{assName} for module {module_code} already exists!")
 
@@ -528,7 +649,11 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         if (upload_test_files(self.params_path, kwargs)):
             if not updateParamsFile(self.params_path, kwargs):
                 # if this returns false, no error occurred
-                create_message_box(f"Assignment created successfully")
+                if self.existing_assignment is None:
+                    create_message_box("Assignment created successfully")
+                else:
+                    create_message_box("Assignment updated successfully")
+                self.close()
 
 class CreateRepeatAssignmentsDialog(QDialog, Ui_Dialog_Create_Repeat_Assignments):
     def __init__(self, parent=None):
@@ -838,9 +963,9 @@ class CreateDefinitionsDialog(QDialog, Ui_Dialog_Create_Definitions):
             return True
         return False
 
-class CloneAssignmentDialog(QDialog, Ui_Dialog_Clone_Assignment):
+class ViewAssignmentDialog(QDialog, Ui_Dialog_View_Assignment):
     def __init__(self, parent=None):
-        super(CloneAssignmentDialog, self).__init__(parent)
+        super(ViewAssignmentDialog, self).__init__(parent)
         self.setupUi(self)
         assignments, error = getModuleAssignments(module)
         if not error:
@@ -850,12 +975,22 @@ class CloneAssignmentDialog(QDialog, Ui_Dialog_Clone_Assignment):
             self.textEdit_showFileContent.setReadOnly(False)
             self.checkBox_clone.stateChanged.connect(
             lambda: self.clone_assignment())
+            self.checkBox_edit.stateChanged.connect(
+            lambda: self.edit_assignment())
+            self.checkBox_delete.stateChanged.connect(
+            lambda: self.delete_assignment())
+            self.checkBox_clone.setEnabled(False)
+            self.checkBox_edit.setEnabled(False)
+            self.checkBox_delete.setEnabled(False)
 
     def display(self):
         content, filename, error = getParams(module, self.comboBox_assignments.currentText())
         if not error:
             self.textEdit_showFileContent.setText(content)
             self.submit_filepath = filename
+            self.checkBox_clone.setEnabled(True)
+            self.checkBox_edit.setEnabled(True)
+            self.checkBox_delete.setEnabled(True)
 
     def clone_assignment(self):
         if self.checkBox_clone.isChecked():
@@ -866,6 +1001,9 @@ class CloneAssignmentDialog(QDialog, Ui_Dialog_Clone_Assignment):
                 if contents is not None:
                     if not cloneAssignment(module, assignment_name, contents):
                         create_message_box("Assignment cloned successfully")
+                        self.close()
+            else:
+                create_message_box("If cloning this assignment, you must provide a new assignment name")
 
     def validateYaml(self):
         contents = self.textEdit_showFileContent.toPlainText()
@@ -878,6 +1016,27 @@ class CloneAssignmentDialog(QDialog, Ui_Dialog_Clone_Assignment):
             err = format_exc()
             create_message_box(f"The entered assignment parameters are not valid: {err}")
             return None
+
+    def edit_assignment(self):
+        if self.checkBox_edit.isChecked():
+            contents = self.validateYaml()
+            data: dict = yaml.safe_load(contents)
+            dialog = CreateOneOffAssignmentDialog(self, existing_assignment=data, assignment_path=self.submit_filepath)
+            dialog.show()
+            self.close()
+
+    def confirm_deletion(self):
+        ret = QMessageBox.question(self,'', "Are you sure to delete this assignment?", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+
+        return ret == QMessageBox.Yes
+
+    def delete_assignment(self):
+        if self.checkBox_delete.isChecked():
+            if self.confirm_deletion():
+                error = deleteAssignment(module, self.comboBox_assignments.currentText())
+                if not error:
+                    create_message_box("Assignment deleted successfully")
+                    self.close()
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
