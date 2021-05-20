@@ -483,7 +483,7 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         self.test_number += 1
         self.tests[f"test{self.test_number}"] = {"tag": tag, "marks": marks, "command": command, "inputDataFile": inputDataFile,
                           "answerFile": answerFile, "filterFile": filterFile, "filterCommand": filterCommand}
-        self.testList.addItem(f"test{self.test_number} = Tag: {tag}, Marks: {marks}, Command: {command}")
+        self.testList.addItem(f"{self.test_number}. Tag: {tag}, Marks: {marks}, Command: {command}")
         self.clearTestForm()
         self.update_total_marks()
 
@@ -492,8 +492,8 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
 
         if itemChosenWidget is not None:
             itemChosen = itemChosenWidget.text()
-            equalsIndex = itemChosen.index("=")
-            test_key = itemChosen[0:equalsIndex - 1]
+            dotIndex = itemChosen.index(".")
+            test_key = itemChosen[0:dotIndex - 1]
             test = self.tests[test_key]
 
             tag = self.lineEdit_tag.text().strip()
@@ -522,8 +522,8 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         if itemChosen is not None:
             self.testList.setEnabled(False)
             itemChosen = itemChosen.text()
-            equalsIndex = itemChosen.index("=")
-            test_key = itemChosen[0:equalsIndex - 1]
+            dotIndex = itemChosen.index(".")
+            test_key = itemChosen[0:dotIndex - 1]
             test = self.tests[test_key]
             self.lineEdit_tag.setText(test["tag"])
             self.lineEdit_marks.setText(str(test["marks"]))
@@ -560,9 +560,9 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         for key, value in self.tests.items():
             if key.startswith("test"):
                 new_key = key[0:len("test")] + str(i)
-                i += 1
                 new_map[new_key] = value
-                self.testList.addItem(f"{new_key} = Tag: {value['tag']}, Marks: {str(value['marks'])}, Command: {value['command']}")
+                self.testList.addItem(f"{i}. Tag: {value['tag']}, Marks: {str(value['marks'])}, Command: {value['command']}")
+                i += 1
             else:
                 new_map[key] = value # in case the test is compilation or attendance
 
@@ -984,13 +984,17 @@ class ViewAssignmentDialog(QDialog, Ui_Dialog_View_Assignment):
             self.checkBox_delete.setEnabled(False)
 
     def display(self):
-        content, filename, error = getParams(module, self.comboBox_assignments.currentText())
-        if not error:
-            self.textEdit_showFileContent.setText(content)
-            self.submit_filepath = filename
-            self.checkBox_clone.setEnabled(True)
-            self.checkBox_edit.setEnabled(True)
-            self.checkBox_delete.setEnabled(True)
+        text = self.comboBox_assignments.currentText()
+        if not text == "":
+            content, filename, error = getParams(module, text)
+            if not error:
+                self.textEdit_showFileContent.setText(content)
+                self.submit_filepath = filename
+                self.checkBox_clone.setEnabled(True)
+                self.checkBox_edit.setEnabled(True)
+                self.checkBox_delete.setEnabled(True)
+        else:
+            create_message_box("Choose an assignment first")
 
     def clone_assignment(self):
         if self.checkBox_clone.isChecked():
