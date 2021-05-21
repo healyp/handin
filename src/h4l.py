@@ -183,13 +183,13 @@ class ManageStudentMarksDialog(QDialog, Ui_Dialog_Manage_Student_Marks):
         super(ManageStudentMarksDialog, self).__init__(parent)
         self.setupUi(self)
         # self.comboBox_moduleCode.addItems(getModuleCodes())
-        self.comboBox_week.addItems(["w01", "w02", "w03", "w04", "w05", "w06", "w07",
-                                    "w08", "w09", "w10", "w11", "w12", "w13"])
-        self.comboBox_week.currentTextChanged.connect(self.update_table)
+        self.comboBox_assignment.currentTextChanged.connect(self.update_table)
         # self.comboBox_moduleCode.currentTextChanged.connect(self.update_table)
         #self.tableWidget.setEnabled(False)
-        self.update_table()
         self.label_module.setText(module)
+
+        if self.loadAssignments():
+            self.update_table()
 
     def columnFromLabel(self, label) -> int:
         model = self.tableWidget.horizontalHeader().model()
@@ -198,77 +198,85 @@ class ManageStudentMarksDialog(QDialog, Ui_Dialog_Manage_Student_Marks):
                 return column
         return -1
 
+    def loadAssignments(self):
+        assignments, error = getModuleAssignments(module)
+        if not error:
+            for assignment in assignments:
+                self.comboBox_assignment.addItem(assignment)
+
+        return not error
+
     def update_table(self):
         """update table widget - signal"""
         try:
             horizontal_header_labels = ["Student ID"]
-            test_items, error = get_all_test_items(module, self.comboBox_week.currentText())
+            assignment = self.comboBox_assignment.currentText()
+            if assignment is not None and assignment != "":
+                test_items, error = get_all_test_items(module, assignment)
 
-            if not error:
-                horizontal_header_labels += test_items
-                horizontal_header_labels += ["Attempts Left", "Total Marks"]
-                length = len(horizontal_header_labels)
-                self.tableWidget.setColumnCount(length)
-                student_ids, error1 = get_all_student_ids(module)
+                if not error:
+                    horizontal_header_labels += test_items
+                    horizontal_header_labels += ["Attempts Left", "Total Marks"]
+                    length = len(horizontal_header_labels)
+                    self.tableWidget.setColumnCount(length)
+                    student_ids, error1 = get_all_student_ids(module)
 
-                if not error1:
-                    self.tableWidget.setRowCount(len(student_ids))
-                    self.tableWidget.setHorizontalHeaderLabels(horizontal_header_labels)
+                    if not error1:
+                        self.tableWidget.setRowCount(len(student_ids))
+                        self.tableWidget.setHorizontalHeaderLabels(horizontal_header_labels)
 
-                    # write student ids
-                    row = 0
-                    for _id in student_ids:
-                        self.tableWidget.setItem(row, 0, createTableItem(_id))
-                        for i in range(1, length):
-                            self.tableWidget.setItem(row, i, createTableItem(""))
-                        row += 1
-                    # write attendance, compilation, test1, test2 ....
-                    vars = {}
-                    try:
-                        for row in range(self.tableWidget.rowCount()):
-                            student_id = self.tableWidget.item(row, 0).text().strip()
-                            week_number = self.comboBox_week.currentText()
-                            data, error = get_vars(module, week_number, student_id)
-                            if error:
-                                return
-
-                            vars[(module, week_number, student_id)] = data
-                            for label in horizontal_header_labels[1:-2]:
-                                if label in data.keys():
-                                    self.tableWidget.setItem(row, self.columnFromLabel(label),
-                                                             createTableItem(str(data[label])))
-
-                    except Exception as e:
-                        e = format_exc()
-                        print(e)
-                    # write attempts left and total marks
-                    try:
-                        for row in range(self.tableWidget.rowCount()):
-                            student_id = self.tableWidget.item(row, 0).text().strip()
-                            week_number = self.comboBox_week.currentText()
-                            vars_tuple = (module, week_number, student_id)
-                            if not vars_tuple in vars:
-                                data, error = get_vars(module, week_number, student_id)
+                        # write student ids
+                        row = 0
+                        for _id in student_ids:
+                            self.tableWidget.setItem(row, 0, createTableItem(_id))
+                            for i in range(1, length):
+                                self.tableWidget.setItem(row, i, createTableItem(""))
+                            row += 1
+                        # write attendance, compilation, test1, test2 ....
+                        vars = {}
+                        try:
+                            for row in range(self.tableWidget.rowCount()):
+                                student_id = self.tableWidget.item(row, 0).text().strip()
+                                data, error = get_vars(module, assignment, student_id)
                                 if error:
                                     return
-                                vars[vars_tuple] = data
-                            else:
-                                data = vars[vars_tuple]
-                            if "attemptsLeft" in data.keys():
-                                self.tableWidget.setItem(row, self.columnFromLabel("Attempts Left"),
-                                                         createTableItem(str(data["attemptsLeft"])))
-                            if "marks" in data.keys():
-                                self.tableWidget.setItem(row, self.columnFromLabel("Total Marks"),
-                                                         createTableItem(str(data["marks"])))
-                    except Exception as e:
-                        e = format_exc()
-                        print(e)
+
+                                vars[(module, assignment, student_id)] = data
+                                for label in horizontal_header_labels[1:-2]:
+                                    if label in data.keys():
+                                        self.tableWidget.setItem(row, self.columnFromLabel(label),
+                                                                 createTableItem(str(data[label])))
+
+                        except Exception as e:
+                            e = format_exc()
+                            print(e)
+                        # write attempts left and total marks
+                        try:
+                            for row in range(self.tableWidget.rowCount()):
+                                student_id = self.tableWidget.item(row, 0).text().strip()
+                                vars_tuple = (module, assignment, student_id)
+                                if not vars_tuple in vars:
+                                    data, error = get_vars(module, assignment, student_id)
+                                    if error:
+                                        return
+                                    vars[vars_tuple] = data
+                                else:
+                                    data = vars[vars_tuple]
+                                if "attemptsLeft" in data.keys():
+                                    self.tableWidget.setItem(row, self.columnFromLabel("Attempts Left"),
+                                                             createTableItem(str(data["attemptsLeft"])))
+                                if "marks" in data.keys():
+                                    self.tableWidget.setItem(row, self.columnFromLabel("Total Marks"),
+                                                             createTableItem(str(data["marks"])))
+                        except Exception as e:
+                            e = format_exc()
+                            print(e)
 
         except Exception as e:
             print(e)
             self.tableWidget.clear()
 
-def upload_test_files(params_path, data):
+def upload_test_files(params_path, data, editing = False, changed_files = {}):
     """map all tests paths to the path that will be stored on the server and upload the files"""
     fileKeys = ['inputDataFile', 'answerFile', 'filterFile']
     tests = data['tests']
@@ -276,8 +284,14 @@ def upload_test_files(params_path, data):
         var = tests[key]
         for file in fileKeys:
             if file in var:
+                reupload = True
+                if editing:
+                    if key in changed_files:
+                        reupload = changed_files[key][file]
+                    else:
+                        reupload = False
                 file_path = var[file]
-                if file_path != "":
+                if reupload and file_path != "":
                     server_directory_full, server_directory_relative, server_file_name = map_tests_path(params_path, key, file_path, file)
                     var[file] = server_directory_full + "/" + server_file_name
                     upload_path = server_directory_relative + "/" + server_file_name
@@ -323,7 +337,7 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         self.lineEdit_compilation_marks.setValidator(QRegExpValidator(regex))
         self.lineEdit_marks.setValidator(QRegExpValidator(regex))
         self.create.clicked.connect(lambda: self.createOneOffAssignment())
-        self.cancel.clicked.connect(lambda: self.close())
+        self.cancel.clicked.connect(lambda: self.cancelClicked())
         self.lineEdit_attendance_marks.textChanged.connect(self.update_total_marks)
         self.lineEdit_compilation_marks.textChanged.connect(self.update_total_marks)
         self.checkBox_inputDataFile.stateChanged.connect(
@@ -355,11 +369,14 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
 
         self.create.setEnabled(False)
 
+        self.unsaved_test = False # a variable to keep track of if there is a test being added/edited and Add/Edit Test was not clicked
+
         self.tests = {}
         self.test_number = 0
 
         self.existing_assignment = existing_assignment
         self.assignment_path = assignment_path
+        self.changed_files = {} # keeps track of files that have changed since the editing started so that to signal that re-upload needs to occur
         self.loadFromExisting()
 
     def loadExistingTests(self, tests: dict):
@@ -410,6 +427,10 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
             self.create.setText("Save")
             self.update_total_marks()
 
+    def setFileLabelText(self, label, text):
+        label.setText(text)
+        label.setToolTip(text)
+
     def num_tests(self):
         i = 0
         for key, value in self.tests.items():
@@ -419,22 +440,36 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         return i
 
     def disable_create_button(self):
-        disable = False
+        number_tests = self.num_tests()
+        disable = number_tests == 0
+        if not disable:
+            test_lineEdits = self.groupBox_customTest1.findChildren(QLineEdit)
 
-        if self.num_tests() == 0:
             for lineEdit in self.findChildren(QLineEdit):
-                if lineEdit != self.lineEdit_assName and lineEdit.text().strip() == "" and lineEdit.isEnabled():
+                doDisableCheck = lineEdit not in test_lineEdits or number_tests == 0
+                if doDisableCheck and lineEdit != self.lineEdit_assName and lineEdit.text().strip() == "" and lineEdit.isEnabled():
                     disable = True
                     break
 
         self.create.setEnabled(not disable)
 
+    def disable_test_list(self, disable):
+        if disable:
+            self.testsGroupBox.setEnabled(False)
+            self.testsGroupBox.setToolTip("Finish editing the current test")
+        else:
+            self.testsGroupBox.setEnabled(True)
+            self.testsGroupBox.setToolTip(None)
+
     def disable_test_button(self):
         disable = False
+        self.unsaved_test = False
         for lineEdit in self.groupBox_customTest1.findChildren(QLineEdit):
-            if lineEdit.text().strip() == "" and lineEdit.isEnabled():
-                disable = True
-                break
+            enabled = lineEdit.isEnabled()
+            if lineEdit.text().strip() == "" and enabled:
+                disable = disable or True
+            elif enabled:
+                self.unsaved_test = True
 
         self.addTest.setEnabled(not disable)
 
@@ -445,13 +480,15 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
             dialog.setFileMode(QtWidgets.QFileDialog.AnyFile)
             filename, file_type = QtWidgets.QFileDialog.getOpenFileName(
                 self, "Choose file", "./", "All Files (*)")
-            label.setText(filename)
+            self.setFileLabelText(label, filename)
             if is_filter and (filter_line_edit is not None):
                 filter_line_edit.setEnabled(True)
+                self.disable_test_button()
         else:
             label.setText("")
             if filter_line_edit is not None:
                 filter_line_edit.setEnabled(False)
+                self.disable_test_button()
 
     def silentCheckBox(self, checkBox):
         checkBox.blockSignals(True)
@@ -469,6 +506,7 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         self.checkBox_answerFile.setChecked(False)
         self.checkBox_inputDataFile.setChecked(False)
         self.checkBox_filterFile.setChecked(False)
+        self.unsaved_test = False
 
     def addTestPressed(self):
         tag = self.lineEdit_tag.text().strip()
@@ -486,6 +524,22 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         self.testList.addItem(f"{self.test_number}. Tag: {tag}, Marks: {marks}, Command: {command}")
         self.clearTestForm()
         self.update_total_marks()
+        self.disable_create_button()
+
+    def checkTestFilesEdited(self, test_key, old_test, edited_test):
+        """ check if any test files were edited and need re-uploading to the server """
+        keys = ['inputDataFile', 'answerFile', 'filterFile']
+
+        if test_key not in self.changed_files:
+            self.changed_files[test_key] = {}
+
+        for key in keys:
+            if key in old_test and key in edited_test:
+                old = old_test[key]
+                new = edited_test[key]
+                self.changed_files[test_key][key] = new != "" and old != new
+            else:
+                self.changed_files[test_key][key] = False
 
     def editTest(self):
         itemChosenWidget = self.testList.currentItem()
@@ -493,7 +547,8 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         if itemChosenWidget is not None:
             itemChosen = itemChosenWidget.text()
             dotIndex = itemChosen.index(".")
-            test_key = itemChosen[0:dotIndex - 1]
+            test_number = itemChosen[0:dotIndex]
+            test_key = f"test{test_number}"
             test = self.tests[test_key]
 
             tag = self.lineEdit_tag.text().strip()
@@ -507,8 +562,10 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
             filterCommand = self.lineEdit_filterCommand.text().strip()
             self.tests[test_key] = {"tag": tag, "marks": marks, "command": command, "inputDataFile": inputDataFile,
                               "answerFile": answerFile, "filterFile": filterFile, "filterCommand": filterCommand}
-            itemChosenWidget.setText(f"{test_key} = Tag: {tag}, Marks: {marks}, Command: {command}")
-            self.testList.setEnabled(True)
+            if self.existing_assignment is not None:
+                self.checkTestFilesEdited(test_key, test, self.tests[test_key])
+            itemChosenWidget.setText(f"{test_number}. Tag: {tag}, Marks: {marks}, Command: {command}")
+            self.disable_test_list(False)
             self.addTest.setText("Add Test")
             self.label_19.setText("Add Test:")
             self.addTest.clicked.disconnect(self.editTest)
@@ -520,10 +577,10 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         itemChosen = self.testList.currentItem()
 
         if itemChosen is not None:
-            self.testList.setEnabled(False)
+            self.disable_test_list(True)
             itemChosen = itemChosen.text()
             dotIndex = itemChosen.index(".")
-            test_key = itemChosen[0:dotIndex - 1]
+            test_key = f"test{itemChosen[0:dotIndex]}"
             test = self.tests[test_key]
             self.lineEdit_tag.setText(test["tag"])
             self.lineEdit_marks.setText(str(test["marks"]))
@@ -534,17 +591,17 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
 
             inputFile = test["inputDataFile"]
             if inputFile != "":
-                self.label_inputDataFile.setText(inputFile)
+                self.setFileLabelText(self.label_inputDataFile, inputFile)
                 self.silentCheckBox(self.checkBox_inputDataFile)
 
             answerFile = test["answerFile"]
             if answerFile != "":
-                self.label_answerFile.setText(answerFile)
+                self.setFileLabelText(self.label_answerFile, answerFile)
                 self.silentCheckBox(self.checkBox_answerFile)
 
             filterFile = test["filterFile"]
             if filterFile != "":
-                self.label_filterFile.setText("")
+                self.setFileLabelText(self.label_filterFile, filterFile)
                 self.silentCheckBox(self.checkBox_filterFile)
 
             self.label_19.setText("Edit Test:")
@@ -574,8 +631,8 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
 
         if itemChosenWidget is not None:
             itemChosen = itemChosenWidget.text()
-            equalsIndex = itemChosen.index("=")
-            test_key = itemChosen[0:equalsIndex - 1]
+            dotIndex = itemChosen.index(".")
+            test_key = f"test{itemChosen[0:dotIndex]}"
             self.testList.takeItem(self.testList.currentRow())
             self.tests.pop(test_key)
             self.reorderTests()
@@ -600,6 +657,10 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         return marks_sum
 
     def createOneOffAssignment(self):
+        if self.unsaved_test:
+            create_message_box("Save the test being currently edited first")
+            return
+
         # module_code = self.comboBox_moduleCode.currentText().strip()
         module_code = module
         week_number = self.weekNumber_comboBox.currentText().strip()
@@ -646,7 +707,11 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         return False
 
     def update_params_file(self, **kwargs):
-        if (upload_test_files(self.params_path, kwargs)):
+        editing = self.existing_assignment is not None
+        changed_files = {}
+        if editing:
+            changed_files = self.changed_files
+        if upload_test_files(self.params_path, kwargs, editing, changed_files):
             if not updateParamsFile(self.params_path, kwargs):
                 # if this returns false, no error occurred
                 if self.existing_assignment is None:
@@ -654,6 +719,15 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
                 else:
                     create_message_box("Assignment updated successfully")
                 self.close()
+
+    def confirm_close(self):
+        ret = QMessageBox.question(self,'', "Are you sure you want to cancel? You will lose all changes", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+
+        return ret == QMessageBox.Yes
+
+    def cancelClicked(self):
+        if self.confirm_close():
+            self.close()
 
 class CreateRepeatAssignmentsDialog(QDialog, Ui_Dialog_Create_Repeat_Assignments):
     def __init__(self, parent=None):
@@ -869,7 +943,7 @@ class CreateRepeatAssignmentsDialog(QDialog, Ui_Dialog_Create_Repeat_Assignments
         return False
 
     def update_params_file(self, **kwargs):
-        if (upload_test_files(self.params_path, kwargs)):
+        if upload_test_files(self.params_path, kwargs):
             if not updateParamsFile(self.params_path, kwargs):
                 # if this returns false, no error occurred
                 create_message_box(f"Assignment created successfully")

@@ -138,7 +138,7 @@ def getModuleAssignments(module_code) -> list:
 
     return [], error
 
-def get_all_test_items(module_code, week_number) -> list:
+def get_all_test_items(module_code, assignment) -> list:
     global s
     try:
         if setSocket():
@@ -146,7 +146,7 @@ def get_all_test_items(module_code, week_number) -> list:
             addLecturerAuthDetails(args)
             args[FileServerCommands.ModuleInfoRequestCodes.CODE] = FileServerCommands.ModuleInfoRequestCodes.MODULE_TEST_ITEMS
             args['module_code'] = module_code
-            args['week_number'] = week_number
+            args['assignment'] = assignment
 
             response = request(Request(s, FileServerCommands.MODULE_INFO, args))
 

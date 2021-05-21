@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'src/ui/create_one_off_assignment_improved.ui'
+# Form implementation generated from reading ui file 'createOneOffAssignment_dialog.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.4
 #
@@ -221,21 +221,21 @@ class Ui_Dialog(object):
         font.setWeight(75)
         self.label_19.setFont(font)
         self.label_19.setObjectName("label_19")
-        self.groupBox = QtWidgets.QGroupBox(Dialog)
-        self.groupBox.setGeometry(QtCore.QRect(20, 630, 741, 211))
-        self.groupBox.setTitle("")
-        self.groupBox.setObjectName("groupBox")
-        self.testList = QtWidgets.QListWidget(self.groupBox)
+        self.testsGroupBox = QtWidgets.QGroupBox(Dialog)
+        self.testsGroupBox.setGeometry(QtCore.QRect(20, 630, 741, 211))
+        self.testsGroupBox.setTitle("")
+        self.testsGroupBox.setObjectName("testsGroupBox")
+        self.testList = QtWidgets.QListWidget(self.testsGroupBox)
         self.testList.setGeometry(QtCore.QRect(10, 10, 491, 191))
         self.testList.setObjectName("testList")
-        self.editButton = QtWidgets.QPushButton(self.groupBox)
+        self.editButton = QtWidgets.QPushButton(self.testsGroupBox)
         self.editButton.setGeometry(QtCore.QRect(570, 30, 80, 23))
         self.editButton.setObjectName("editButton")
-        self.label_21 = QtWidgets.QLabel(self.groupBox)
+        self.label_21 = QtWidgets.QLabel(self.testsGroupBox)
         self.label_21.setGeometry(QtCore.QRect(580, 100, 57, 15))
         self.label_21.setAlignment(QtCore.Qt.AlignCenter)
         self.label_21.setObjectName("label_21")
-        self.removeButton = QtWidgets.QPushButton(self.groupBox)
+        self.removeButton = QtWidgets.QPushButton(self.testsGroupBox)
         self.removeButton.setGeometry(QtCore.QRect(570, 160, 80, 23))
         self.removeButton.setObjectName("removeButton")
         self.label_20 = QtWidgets.QLabel(Dialog)

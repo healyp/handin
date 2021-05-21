@@ -54,7 +54,7 @@ class ModuleInfo(AbstractCommand):
         params = request.args
 
         module_code = None
-        week_number = None
+        assignment = None
 
         if 'module_code' in params:
             module_code = params['module_code']
@@ -64,15 +64,15 @@ class ModuleInfo(AbstractCommand):
             respond(request, False, "You need to provide a module_code parameter")
             return
 
-        if 'week_number' in params:
-            week_number = params['week_number']
+        if 'assignment' in params:
+            assignment = params['assignment']
 
-        if not week_number:
-            request_bad("MODULE_INFO: MODULE_TEST_ITEMS", "Mandatory week_number parameter not provided")
-            respond(request, False, "You need to provide a week_number parameter")
+        if not assignment:
+            request_bad("MODULE_INFO: MODULE_TEST_ITEMS", "Mandatory assignment parameter not provided")
+            respond(request, False, "You need to provide an assignment parameter")
             return
 
-        params_filepath = const.get_params_file_path(module_code, week_number)
+        params_filepath = const.get_params_file_path(module_code, assignment)
         logging.debug(f"Using filepath {params_filepath}")
 
         list = []
@@ -85,7 +85,7 @@ class ModuleInfo(AbstractCommand):
         else:
             logging.debug(f"File {params_filepath} does not exist")
 
-        logging.debug(f"Found test items: {list} for module {module_code} for week {week_number}")
+        logging.debug(f"Found test items: {list} for module {module_code} for assignment {assignment}")
         response_data = {
             'test_items': list
         }
