@@ -180,3 +180,11 @@ def assPath(module_code: str, ay: str, ass: str):
 
 def getFileNameFromPath(path):
     return Path(path).name
+
+"""
+    Converts the given path relative to .handin to an absolute path
+"""
+def relativeToAbsolute(path):
+    if path.startswith("/"):
+        path = path[1:]
+    return os.path.join(ROOTDIR, path)

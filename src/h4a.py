@@ -71,6 +71,7 @@ class CreateNewModuleDialog(QDialog, Ui_Dialog_Create_New_Module):
 
     def create_module(self):
         module_code: str = self.lineEdit.text().strip()
+        module_code = module_code.lower()
         name: str = self.lineEdit_name.text().strip()
         ay: str = self.lineEdit_academicYear.text().strip()
         # start_semester: str = self.dateEdit_startSemester.text().strip()
@@ -78,10 +79,10 @@ class CreateNewModuleDialog(QDialog, Ui_Dialog_Create_New_Module):
             create_message_box(f"Module instance {module_code} in {ay} already exists!")
             return
 
-        moduleDir = os.path.join(ROOTDIR, module_code, ay)
+        moduleDir = os.path.join(ROOTDIR[ROOTDIR.index(".handin"):], module_code, ay)
         self.create_files(moduleDir)
         linkDir = os.path.join(ROOTDIR, module_code, "curr")
-        os.symlink(moduleDir, linkDir)
+        os.symlink(ay, linkDir, True)
 
         name_path = os.path.join(ROOTDIR, module_code, "name.txt")
         with open(name_path, 'w+') as file:

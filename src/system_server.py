@@ -22,14 +22,12 @@ def get_file_content(path, mode='r'):
         content = f.read()
     return content
 
-
 def get_total_attempts(module_code, assignment_name) -> int:
     """read /**weekNum**/params.yaml file to get totalAttempts value"""
     path = const.get_params_file_path(module_code, assignment_name)
     with open(path, 'r') as stream:
         data: dict = yaml.safe_load(stream)
     return data.get("totalAttempts")
-
 
 def getPenaltyPerDay(module_code, assignment_name):
     """get penalty per day for a module"""
@@ -41,7 +39,6 @@ def getPenaltyPerDay(module_code, assignment_name):
     else:
         print("ERROR: penaltyPerDay doesn't exist!!!")
         return "False"
-
 
 def getStartDay(module_code, assignment_name):
     """get start day for a module"""
@@ -324,7 +321,6 @@ def sendFileToServer(name, sock):
     send_message("End sending", sock)
     RetrCommand(name, sock)
 
-
 def getExecResult(name, sock):
     """Exec the program and get exec result"""
     send_message("OK", sock)
@@ -398,9 +394,9 @@ def getExecResult(name, sock):
                         test_marks = int(tests[key]["marks"])
                         test_tag = tests[key]["tag"]
                         test_command = tests[key]["command"]
-                        input_data_file_path = tests[key]["inputDataFile"]
-                        answer_file_path = tests[key]["answerFile"]
-                        filter_file_path = tests[key]["filterFile"]
+                        input_data_file_path = const.relativeToAbsolute(tests[key]["inputDataFile"])
+                        answer_file_path = const.relativeToAbsolute(tests[key]["answerFile"])
+                        filter_file_path = const.relativeToAbsolute(tests[key]["filterFile"])
                         filter_command = tests[key]["filterCommand"]
                         stdin_input = None
                         if input_data_file_path is not None and input_data_file_path != '':

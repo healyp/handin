@@ -182,10 +182,7 @@ class ManageStudentMarksDialog(QDialog, Ui_Dialog_Manage_Student_Marks):
     def __init__(self, parent=None):
         super(ManageStudentMarksDialog, self).__init__(parent)
         self.setupUi(self)
-        # self.comboBox_moduleCode.addItems(getModuleCodes())
         self.comboBox_assignment.currentTextChanged.connect(self.update_table)
-        # self.comboBox_moduleCode.currentTextChanged.connect(self.update_table)
-        #self.tableWidget.setEnabled(False)
         self.label_module.setText(module)
 
         if self.loadAssignments():
@@ -292,9 +289,10 @@ def upload_test_files(params_path, data, editing = False, changed_files = {}):
                         reupload = False
                 file_path = var[file]
                 if reupload and file_path != "":
-                    server_directory_full, server_directory_relative, server_file_name = map_tests_path(params_path, key, file_path, file)
-                    var[file] = server_directory_full + "/" + server_file_name
+                    server_directory_relative, server_file_name = map_tests_path(params_path, key, file_path, file)
                     upload_path = server_directory_relative + "/" + server_file_name
+                    upload_path = upload_path.replace("curr", const.whatAY())
+                    var[file] = upload_path
                     if uploadFile(file_path, upload_path):
                         create_message_box(f"An error occurred uploading file {file_path} to server, try again")
                         return False
@@ -307,17 +305,15 @@ def map_tests_path(params_path, test_name, path, file):
         The directory name of params_path is used as the directory with everything before the module code stripped off.
         The filename is then created as {test_name}-{file}{extension} where file is the key in the yaml storing the path to the file,
         e.g this method would return for an input file /local/path/to/fileinput.txt and for module cs4123 w01 and test1 and inputDataFile:
-            server_directory_full = /path/on/server/to/cs4123/curr/assignments/w01/ this is what will be stored in the yaml file
             server_directory_relative = /cs4123/curr/assignments/w01/ this is used to upload the file relative to .handin
             server_file_name = inputfile.txt
     """
     file_name = getFileNameFromPath(path)
     extension = os.path.splitext(file_name)[1]
     server_directory = os.path.dirname(params_path)
-    server_directory_full = server_directory
     server_directory_relative = server_directory[server_directory.index("/.handin") + len("/.handin"):]
     server_file_name = f"{test_name}-{file}{extension}"
-    return server_directory_full, server_directory_relative, server_file_name
+    return server_directory_relative, server_file_name
 
 class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
     def __init__(self, parent=None, existing_assignment: dict = None, assignment_path: str = None):
@@ -400,6 +396,7 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
                 self.lineEdit_compilation_command.setText(compilation['command'])
 
         self.reorderTests()
+        self.disable_create_button()
 
     def loadFromExisting(self):
         if self.existing_assignment is not None and self.assignment_path is not None:
@@ -1056,6 +1053,7 @@ class ViewAssignmentDialog(QDialog, Ui_Dialog_View_Assignment):
             self.checkBox_clone.setEnabled(False)
             self.checkBox_edit.setEnabled(False)
             self.checkBox_delete.setEnabled(False)
+            self.textEdit_showFileContent.setReadOnly(True)
 
     def display(self):
         text = self.comboBox_assignments.currentText()
