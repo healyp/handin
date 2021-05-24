@@ -361,6 +361,10 @@ def remove_archive():
     if archives_path is not None:
         shutil.rmtree(archives_path)
 
+def test_output(path, test, output):
+    path = path + f"/{test}-output.txt"
+    with open(path, 'w+') as file:
+        file.write(output)
 
 def getExecResult(name, sock):
     global archives_path, old_archives
@@ -475,7 +479,9 @@ def getExecResult(name, sock):
                                 except Exception as e:
                                     print(e)
 
-                            if compare_output_with_answer(str(output), str(answer)):
+                            output = str(output.decode())
+                            test_output(os.path.dirname(vars_filepath), key, output)
+                            if compare_output_with_answer(output, str(answer)):
                                 # custom test success
                                 curr_marks = curr_marks + test_marks
                                 result_msg += "%s: %d/%d</br> " % (test_tag, test_marks, test_marks)
