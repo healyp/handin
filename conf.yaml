@@ -7,3 +7,4 @@ file_server_port: 8500 # The port for the handin file server
 file_server_log_level: 10 # log level for the handin file server. see https://docs.python.org/3/library/logging.html for debug level numeric values 20 is INFO and 10 is DEBUG
 file_html_landing: handin_file_server.html # a html page to show if the handin
 response_timeout: 3 # timeout in seconds to wait for a response from the server
+archive_num: 3 # number of submission archives to keep as well as the current submission (archive_num + 1 copies of submissions in total), set this to -1 for unlimited archives or 0 to disable it

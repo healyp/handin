@@ -13,6 +13,7 @@ import yaml
 import const
 
 from handin_student_template import send_message, recv_message # these are the methods the handin_student script will use to communicate with this server, so import them from it
+import submissions_archive
 
 host = const.HOST
 port = const.PORT
@@ -296,8 +297,13 @@ def checkCollectionFilename(name, sock):
         send_message(str(data.get("collectionFilename")) + " is required!", sock)
     RetrCommand(name, sock)
 
+archives_path = None
+old_archives = []
+
+SUBMISSION_DATE_FORMAT = "%Y-%m-%d_%H:%M:%S"
 
 def sendFileToServer(name, sock):
+    global archives_path, old_archives
     """Copy code file to server side"""
     send_message("OK", sock)
     module_code = recv_message(sock)
@@ -309,6 +315,23 @@ def sendFileToServer(name, sock):
     path_directory = os.path.dirname(path)
     if not os.path.isdir(path_directory):
         os.makedirs(path_directory)
+
+    """
+        Temporarily archive any existing submissions and if an error occurs later,
+        remove the new archive and keep the existing ones.
+
+        If no error occurs we want to cull the old_archives if we are over the
+        archive limit
+    """
+    archives_path, old_archives = submissions_archive.archive(student_id, module_code, const.whatAY(), assignment_name)
+
+    date_file = path_directory + "/submission-date.txt"
+    current_date = datetime.now()
+    current_date = current_date.strftime(SUBMISSION_DATE_FORMAT)
+
+    with open(date_file, 'w+') as file:
+        file.write(current_date)
+
     send_message("Start sending", sock)
     with open(path, 'wb') as f:
         while True:
@@ -334,7 +357,14 @@ def get_file_paths(test: dict):
 
     return input_data_file_path, answer_file_path, filter_file_path
 
+def remove_archive():
+    global archives_path
+    if archives_path is not None:
+        shutil.rmtree(archives_path)
+
+
 def getExecResult(name, sock):
+    global archives_path, old_archives
     """Exec the program and get exec result"""
     send_message("OK", sock)
     module_code = recv_message(sock)
@@ -484,9 +514,13 @@ def getExecResult(name, sock):
             with open(vars_filepath, 'w') as f:
                 yaml.dump(vars_data2, f)
             result_msg += "</br>Total marks: %s</br> " % str(curr_marks)
+            submissions_archive.cull_old_archives(old_archives) # this is a successful submission so, you are free to remove old ones
     else:
         result_msg = "Sorry, you have no attempts left for this assignment!"
+        remove_archive() # unsuccessful submission, remove newest archive and don't remove any old ones
 
+    archives_path = None
+    old_archives = []
     send_message(result_msg, sock)
     RetrCommand(name, sock)
 

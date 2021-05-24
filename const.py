@@ -35,6 +35,8 @@ FILE_ADDR = (FILE_SERVER_HOST, FILE_SERVER_PORT)
 FILE_LOG_LEVEL = data['file_server_log_level']
 FILE_HTML_LANDING = data['file_html_landing']
 
+ARCHIVE_NUM = data['archive_num']
+
 ModCodeRE = r"^cs\d{4}$"          # UL module code re
 
 class FileServerCommands:
