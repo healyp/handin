@@ -187,4 +187,4 @@ def getFileNameFromPath(path):
 def relativeToAbsolute(path):
     if path.startswith("/"):
         path = path[1:]
-    return os.path.join(ROOTDIR, path)
+    return ROOTDIR + "/" + path

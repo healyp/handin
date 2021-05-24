@@ -321,6 +321,19 @@ def sendFileToServer(name, sock):
     send_message("End sending", sock)
     RetrCommand(name, sock)
 
+def get_file_paths(test: dict):
+    input_data_file_path = test["inputDataFile"]
+    if input_data_file_path != "":
+        input_data_file_path = const.relativeToAbsolute(input_data_file_path)
+    answer_file_path = test["answerFile"]
+    if answer_file_path != "":
+        answer_file_path = const.relativeToAbsolute(answer_file_path)
+    filter_file_path = test["answerFile"]
+    if filter_file_path != "":
+        filter_file_path = const.relativeToAbsolute(test["filterFile"])
+
+    return input_data_file_path, answer_file_path, filter_file_path
+
 def getExecResult(name, sock):
     """Exec the program and get exec result"""
     send_message("OK", sock)
@@ -394,9 +407,7 @@ def getExecResult(name, sock):
                         test_marks = int(tests[key]["marks"])
                         test_tag = tests[key]["tag"]
                         test_command = tests[key]["command"]
-                        input_data_file_path = const.relativeToAbsolute(tests[key]["inputDataFile"])
-                        answer_file_path = const.relativeToAbsolute(tests[key]["answerFile"])
-                        filter_file_path = const.relativeToAbsolute(tests[key]["filterFile"])
+                        input_data_file_path, answer_file_path, filter_file_path = get_file_paths(tests[key])
                         filter_command = tests[key]["filterCommand"]
                         stdin_input = None
                         if input_data_file_path is not None and input_data_file_path != '':
