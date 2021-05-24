@@ -331,6 +331,8 @@ def sendFileToServer(name, sock):
     if not os.path.isdir(path_directory):
         os.makedirs(path_directory)
 
+    delete_all_output_files(path_directory)
+
     send_message("Start sending", sock)
     with open(path, 'wb') as f:
         while True:
@@ -361,10 +363,23 @@ def remove_archive():
     if archives_path is not None:
         shutil.rmtree(archives_path)
 
-def test_output(path, test, output):
+def test_output(path, test, output, command=None):
     path = path + f"/{test}-output.txt"
-    with open(path, 'w+') as file:
+
+    mode = 'a'
+    if not os.path.isfile(path):
+        mode = 'w+'
+
+    with open(path, mode) as file:
+        if command is not None:
+            file.write(f"{command}:\n")
         file.write(output)
+
+def delete_all_output_files(data_path):
+    files = [f for f in os.listdir(data_path) if "output" in f]
+
+    for f in files:
+        os.remove(data_path + "/" + f)
 
 def getExecResult(name, sock):
     global archives_path, old_archives
@@ -387,6 +402,7 @@ def getExecResult(name, sock):
     code_filepath = const.get_program_file_path(module_code, assignment_name, student_id, required_code_filename)
     params_filepath = const.get_params_file_path(module_code, assignment_name)
     vars_filepath = const.get_vars_file_path(module_code, assignment_name, student_id)
+    vars_directory = os.path.dirname(vars_filepath)
     with open(params_filepath, 'r') as stream:
         data: dict = yaml.safe_load(stream)
     with open(vars_filepath, 'r') as stream:
@@ -416,7 +432,7 @@ def getExecResult(name, sock):
                 # change working directory
                 os.chdir(os.path.dirname(code_filepath))
 
-                p = Popen(compilation_command, stdout=PIPE, shell=True)
+                p = Popen(compilation_command, stdout=PIPE, stderr=PIPE, shell=True)
                 return_code = p.wait()
                 if return_code == 0:
                     compilation_succeeded = True
@@ -429,6 +445,7 @@ def getExecResult(name, sock):
                     compilation_succeeded = False
                     result_msg += "%s: %d/%d\n" % (compilation_tag, 0, compilation_marks)
                     vars_data["compilation"] = 0
+                    test_output(vars_directory, "compilation", p.stderr.read().decode())
 
                 with open(vars_filepath, 'w') as f:
                     yaml.dump(vars_data, f)
@@ -480,7 +497,7 @@ def getExecResult(name, sock):
                                     print(e)
 
                             output = str(output.decode())
-                            test_output(os.path.dirname(vars_filepath), key, output)
+                            test_output(vars_directory, key, output)
                             if compare_output_with_answer(output, str(answer)):
                                 # custom test success
                                 curr_marks = curr_marks + test_marks
