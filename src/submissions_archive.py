@@ -80,6 +80,7 @@ def _get_submission_date(top_level_path, files: list):
 
     current_date = datetime.now()
     current_date = current_date.strftime(ARCHIVE_DATE_FORMAT)
+    return current_date
 
 """
     Carries out the archival process
@@ -113,7 +114,6 @@ def archive(student_id, module_code, ay, assignment):
 
         if os.path.isdir(path):
             files = _get_top_level_files(path)
-
             if (len(files) > 0):
                 return _do_archive(path, files)
             return None, []

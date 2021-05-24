@@ -192,8 +192,13 @@ def checkIfAssignmentName(name, sock):
         send_message("False", sock)
     RetrCommand(name, sock)
 
+archives_path = None
+old_archives = []
+
+SUBMISSION_DATE_FORMAT = "%Y-%m-%d_%H:%M:%S"
 
 def createVarsFile(name, sock):
+    global archives_path, old_archives
     """Create vars file for a specific student"""
     send_message("OK", sock)
     module_code = recv_message(sock)
@@ -203,6 +208,22 @@ def createVarsFile(name, sock):
     vars_directory = os.path.dirname(vars_filepath)
     if not os.path.isdir(vars_directory):
         os.makedirs(vars_directory)
+
+    """
+        Temporarily archive any existing submissions and if an error occurs later,
+        remove the new archive and keep the existing ones.
+
+        If no error occurs we want to cull the old_archives if we are over the
+        archive limit
+    """
+    archives_path, old_archives = submissions_archive.archive(student_id, module_code, const.whatAY(), assignment_name)
+
+    date_file = vars_directory + "/submission-date.txt"
+    current_date = datetime.now()
+    current_date = current_date.strftime(SUBMISSION_DATE_FORMAT)
+
+    with open(date_file, 'w+') as file:
+        file.write(current_date)
 
     if not os.path.exists(vars_filepath):
         with open(vars_filepath, 'w'):
@@ -297,13 +318,7 @@ def checkCollectionFilename(name, sock):
         send_message(str(data.get("collectionFilename")) + " is required!", sock)
     RetrCommand(name, sock)
 
-archives_path = None
-old_archives = []
-
-SUBMISSION_DATE_FORMAT = "%Y-%m-%d_%H:%M:%S"
-
 def sendFileToServer(name, sock):
-    global archives_path, old_archives
     """Copy code file to server side"""
     send_message("OK", sock)
     module_code = recv_message(sock)
@@ -315,22 +330,6 @@ def sendFileToServer(name, sock):
     path_directory = os.path.dirname(path)
     if not os.path.isdir(path_directory):
         os.makedirs(path_directory)
-
-    """
-        Temporarily archive any existing submissions and if an error occurs later,
-        remove the new archive and keep the existing ones.
-
-        If no error occurs we want to cull the old_archives if we are over the
-        archive limit
-    """
-    archives_path, old_archives = submissions_archive.archive(student_id, module_code, const.whatAY(), assignment_name)
-
-    date_file = path_directory + "/submission-date.txt"
-    current_date = datetime.now()
-    current_date = current_date.strftime(SUBMISSION_DATE_FORMAT)
-
-    with open(date_file, 'w+') as file:
-        file.write(current_date)
 
     send_message("Start sending", sock)
     with open(path, 'wb') as f:
