@@ -85,10 +85,12 @@ def _get_submission_date(top_level_path, files: list):
 """
     Carries out the archival process
 """
-def _do_archive(path, top_level_files: list):
+def _do_archive(student_id, path, top_level_files: list):
     archives = _get_existing_archives(path)
 
     submission_date = _get_submission_date(path, top_level_files)
+
+    print(f"Archiving submission from {submission_date} for {student_id}")
 
     archives_path, old_archives = _get_archive_file_path(submission_date, path, archives)
     _copy_files(path, top_level_files, archives_path)
@@ -115,7 +117,7 @@ def archive(student_id, module_code, ay, assignment):
         if os.path.isdir(path):
             files = _get_top_level_files(path)
             if (len(files) > 0):
-                return _do_archive(path, files)
+                return _do_archive(student_id, path, files)
             return None, []
         else:
             return None, []
