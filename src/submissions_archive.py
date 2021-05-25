@@ -6,6 +6,9 @@ import const
 
 ARCHIVE_DATE_FORMAT = "%Y-%m-%d_%H:%M:%S"
 
+archives_path = None
+old_archives = []
+
 """
     Get the top-level files, i.e. the current submission
 """
@@ -26,9 +29,18 @@ def _get_existing_archives(path) -> list:
     This method removes all the old archives in the list that have been passed in.
     This list is returned by archive.
 """
-def cull_old_archives(archives_to_cull):
-    for f in archives_to_cull:
+def cull_old_archives():
+    global old_archives
+    for f in old_archives:
         shutil.rmtree(f)
+
+"""
+    Undoes the last archive if it exists
+"""
+def undo_archive():
+    global archives_path
+    if archives_path is not None:
+        shutil.rmtree(archives_path)
 
 """
     Gets the oldest date in the list of archives
@@ -41,6 +53,7 @@ def _get_oldest_date(archives):
     old archives that should be removed also
 """
 def _get_archive_file_path(submission_date, path, archives):
+    global old_archives
     archives_path = path + "/archives"
     archives_cull = []
     while len(archives) >= const.ARCHIVE_NUM and const.ARCHIVE_NUM != -1:
@@ -58,7 +71,9 @@ def _get_archive_file_path(submission_date, path, archives):
     if not os.path.isdir(archives_path):
         os.makedirs(archives_path)
 
-    return archives_path, archives_cull
+    old_archives = archives_cull
+
+    return archives_path
 
 """
     Copies the list of files to the archives path
@@ -86,16 +101,17 @@ def _get_submission_date(top_level_path, files: list):
     Carries out the archival process
 """
 def _do_archive(student_id, path, top_level_files: list):
+    global archives_path
     archives = _get_existing_archives(path)
 
     submission_date = _get_submission_date(path, top_level_files)
 
     print(f"Archiving submission from {submission_date} for {student_id}")
 
-    archives_path, old_archives = _get_archive_file_path(submission_date, path, archives)
+    archives_path = _get_archive_file_path(submission_date, path, archives)
     _copy_files(path, top_level_files, archives_path)
 
-    return archives_path, old_archives
+    return True
 
 """
     Archive this student's current submission if it exists.
@@ -111,15 +127,19 @@ def _do_archive(student_id, path, top_level_files: list):
     To remove them, pass the list into cull_old_archives
 """
 def archive(student_id, module_code, ay, assignment):
+    global old_archives
+
     if const.ARCHIVE_NUM != 0:
+        old_archives = []
+
         path = const.ROOTDIR + "/" + module_code + "/" + ay + "/data/" + student_id + "/" + assignment
 
         if os.path.isdir(path):
             files = _get_top_level_files(path)
             if (len(files) > 0):
                 return _do_archive(student_id, path, files)
-            return None, []
+            return False
         else:
-            return None, []
+            return False
     else:
-        return None, []
+        return False
