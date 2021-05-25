@@ -127,10 +127,11 @@ def _do_archive(student_id, path, top_level_files: list):
     To remove them, pass the list into cull_old_archives
 """
 def archive(student_id, module_code, ay, assignment):
-    global old_archives
+    global old_archives, archives_path
 
     if const.ARCHIVE_NUM != 0:
         old_archives = []
+        archives_path = None
 
         path = const.ROOTDIR + "/" + module_code + "/" + ay + "/data/" + student_id + "/" + assignment
 

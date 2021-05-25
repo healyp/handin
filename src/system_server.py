@@ -346,7 +346,7 @@ def get_file_paths(test: dict):
 
     return input_data_file_path, answer_file_path, filter_file_path
 
-def test_output(path, test, output, command=None):
+def test_output(path, test, output, passFail, command=None):
     path = path + f"/{test}-output.txt"
 
     mode = 'a'
@@ -355,8 +355,17 @@ def test_output(path, test, output, command=None):
 
     with open(path, mode) as file:
         if command is not None:
-            file.write(f"{command}:\n")
-        file.write(output)
+            file.write(f"\n*** {command}: ***\n\n")
+
+        if not command:
+            if passFail:
+                passString = "*** PASSED ***\n\n"
+            else:
+                passString = "*** FAILED ***\n\n"
+
+            file.write(passString + output)
+        else:
+            file.write(output)
 
 def delete_all_output_files(data_path):
     files = [f for f in os.listdir(data_path) if "output" in f]
@@ -428,7 +437,7 @@ def getExecResult(name, sock):
                     compilation_succeeded = False
                     result_msg += "%s: %d/%d\n" % (compilation_tag, 0, compilation_marks)
                     vars_data["compilation"] = 0
-                    test_output(vars_directory, "compilation", p.stderr.read().decode())
+                    test_output(vars_directory, "compilation", p.stderr.read().decode(), False)
 
                 with open(vars_filepath, 'w') as f:
                     yaml.dump(vars_data, f)
@@ -481,15 +490,17 @@ def getExecResult(name, sock):
 
                             output = str(output.decode())
                             answer = str(answer.decode())
-                            test_output(vars_directory, key, output)
                             if compare_output_with_answer(output, answer):
                                 # custom test success
                                 curr_marks = curr_marks + test_marks
                                 result_msg += "%s: %d/%d</br> " % (test_tag, test_marks, test_marks)
+                                test_output(vars_directory, key, output, True)
                             else:
                                 # custom test failed
                                 result_msg += "%s: %d/%d</br> " % (test_tag, 0, test_marks)
                                 test_marks = 0
+                                test_output(vars_directory, key, output, False)
+                                test_output(vars_directory, key, answer, None, "Answer File")
 
                             vars_data[key] = test_marks
 
