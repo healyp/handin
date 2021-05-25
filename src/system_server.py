@@ -1,7 +1,6 @@
 import os
 import socket
 import signal
-import string
 import threading
 import time
 import sys
@@ -497,8 +496,9 @@ def getExecResult(name, sock):
                                     print(e)
 
                             output = str(output.decode())
+                            answer = str(answer.decode())
                             test_output(vars_directory, key, output)
-                            if compare_output_with_answer(output, str(answer)):
+                            if compare_output_with_answer(output, answer):
                                 # custom test success
                                 curr_marks = curr_marks + test_marks
                                 result_msg += "%s: %d/%d</br> " % (test_tag, test_marks, test_marks)
@@ -546,11 +546,12 @@ def getExecResult(name, sock):
     send_message(result_msg, sock)
     RetrCommand(name, sock)
 
+def remove_punc(string):
+    return ''.join(e for e in string if e.isalnum())
 
 def compare_output_with_answer(output: str, answer: str) -> bool:
-    remove = string.punctuation + string.whitespace
-    return output.maketrans(dict.fromkeys(remove)) == answer.maketrans(dict.fromkeys(remove))
-
+    # if the strings match without punctuation, they are equal
+    return remove_punc(output) == remove_punc(answer)
 
 def replace_whitespace_with_underscore(text: str) -> str:
     return text.replace(' ', '_').replace('\r', '_').replace('\n', '_')
