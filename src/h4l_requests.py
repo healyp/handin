@@ -759,7 +759,7 @@ def cloneAssignment(module, assignment, content):
             if response is not None:
                 if not response.disconnected:
                     if response.success == "True":
-                        return False
+                        return response.data, False
                     else:
                         error = True
                         doError(f"Error: {response.message}")
@@ -780,7 +780,7 @@ def cloneAssignment(module, assignment, content):
         doError(f"{m}")
         error = True
 
-    return error
+    return "", error
 
 def deleteAssignment(module, assignment):
     global s

@@ -66,9 +66,11 @@ class Ui_Dialog(object):
         self.checkBox_delete = QtWidgets.QCheckBox(self.frame)
         self.checkBox_delete.setGeometry(QtCore.QRect(410, 430, 300, 19))
         self.checkBox_delete.setObjectName("checkBox_delete")
+        self.pushButton_edit_help = QtWidgets.QPushButton(self.frame)
+        self.pushButton_edit_help.setGeometry(QtCore.QRect(600, 430, 20, 19))
+        self.pushButton_help.setObjectName("pushButton_edit_help")
 
         self.retranslateUi(Dialog)
-        self.buttonBox.accepted.connect(Dialog.accept)
         self.buttonBox.rejected.connect(Dialog.reject)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
 
@@ -79,6 +81,7 @@ class Ui_Dialog(object):
         self.label_2.setText(_translate("Dialog", "New Assignment:"))
         self.pushButton_show.setText(_translate("MainWindow", "Show"))
         self.pushButton_help.setText(_translate("Dialog", "?"))
+        self.pushButton_edit_help.setText(_translate("Dialog", "?"))
         self.label_3.setText(_translate("Dialog", "Details of assignment:"))
         self.checkBox_clone.setText(_translate("Dialog", "Clone this assignment"))
         self.checkBox_edit.setText(_translate("Dialog", "Edit this assignment"))

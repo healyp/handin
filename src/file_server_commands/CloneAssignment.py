@@ -56,6 +56,9 @@ class CloneAssignment(AbstractCommand):
         with open(filename, 'w+') as file:
             yaml.dump(data, file, default_flow_style=False)
 
+        with open(filename, 'r') as file:
+            return file.read(), filename
+
     def handleRequest(self, request: Request):
         # TODO sending a file in a single request may be too big. Consider changing how large text is sent, maybe in handin_messaging check the size of the string and split it into multiple sendall calls with the final call having DONE at the end
         params = request.args
@@ -103,7 +106,11 @@ class CloneAssignment(AbstractCommand):
             logging.debug(f"Creating directory {newAssignmentPath}")
             os.makedirs(newAssignmentPath)
 
-            self.doClone(module, assignment, newAssignmentPath, content)
+            cloned_tuple = self.doClone(module, assignment, newAssignmentPath, content)
+            response_data = {
+                'contents': cloned_tuple[0],
+                'path': cloned_tuple[1]
+            }
 
             request_ok("CLONE_ASSIGNMENT")
-            respond(request, True, "CLONE_ASSIGNMENT successful")
+            respond(request, True, "CLONE_ASSIGNMENT successful", response_data)

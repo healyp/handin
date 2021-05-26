@@ -39,6 +39,7 @@ class ModuleInfo(AbstractCommand):
         list = []
         if os.path.isdir(path):
             list = [name for name in os.listdir(path)]
+            list.sort()
             logging.debug(f"Assignments found: {list} for module {module_code}")
         else:
             logging.debug(f"Path {path} does not exist as a directory")

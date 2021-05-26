@@ -882,29 +882,49 @@ class ViewAssignmentDialog(QDialog, Ui_Dialog_View_Assignment):
         if not error:
             self.comboBox_assignments.addItems(assignments)
             self.pushButton_show.clicked.connect(self.display)
-#        self.comboBox_assignments.currentTextChanged.connect(self.update_table)
+            self.comboBox_assignments.currentTextChanged.connect(self.generate_auto_next_week)
             self.textEdit_showFileContent.setReadOnly(False)
-            self.checkBox_clone.stateChanged.connect(
-            lambda: self.clone_assignment())
-            self.checkBox_edit.stateChanged.connect(
-            lambda: self.edit_assignment())
-            self.checkBox_delete.stateChanged.connect(
+            self.checkBox_delete.clicked.connect(
             lambda: self.delete_assignment())
             self.checkBox_clone.setEnabled(False)
             self.checkBox_edit.setEnabled(False)
             self.checkBox_delete.setEnabled(False)
             self.textEdit_showFileContent.setReadOnly(True)
-            self.lineEdit_assName.textChanged.connect(self.disable_clone)
             self.pushButton_help.clicked.connect(self.print_name_help)
+            self.pushButton_edit_help.clicked.connect(self.print_checkbox_help)
+            self.pushButton_edit_help.setEnabled(False)
             self.disable_clone()
+            self.buttonBox.accepted.connect(self.do_ok)
         else:
             create_message_box("An error occurred, please try again")
+            self.close()
+
+    def do_ok(self):
+        """ handles when ok is clicked """
+        clone_checked = self.checkBox_clone.isChecked()
+        clone_name = self.lineEdit_assName.text().strip()
+        edit_checked = self.checkBox_edit.isChecked()
+        edit_cloned = clone_checked and edit_checked
+        success = True
+
+        if clone_checked:
+            success = self.clone_assignment()
+
+        if success and edit_cloned:
+            self.edit_assignment() # if edit_cloned is specified, only edit the cloned one if the clone was successful
+        elif not edit_cloned and edit_checked:
+            self.edit_assignment()
+        elif not clone_checked and not edit_checked:
             self.close()
 
     def print_name_help(self):
         create_message_box("Enter the name for the new assignment if you want to clone the current one. " +
                 "If it is a week number (e.g. w01 or week01), the weekNumber field of the cloned assignment will be updated, "
                 + "and start, end and cutoff dates will be populated automatically if a definitions file exists")
+
+    def print_checkbox_help(self):
+        create_message_box("For cloning and editing, check the appropriate box and then OK. To delete, just check the delete box. " +
+                    "To edit the cloned assignment, check both clone and edit and then OK")
 
     def disable_clone(self):
         if self.lineEdit_assName.text().strip() == "":
@@ -914,7 +934,27 @@ class ViewAssignmentDialog(QDialog, Ui_Dialog_View_Assignment):
             self.checkBox_clone.setEnabled(True)
             self.checkBox_clone.setToolTip(None)
 
+    """
+        If the current assignment is named with a week_number the next assignment name is auto generated to be a week number
+    """
+    def generate_auto_next_week(self):
+        text = self.comboBox_assignments.currentText()
+        if _definitions.is_week_number(text):
+            new_week = int(text[1:]) + 1
+            if new_week < 10:
+                new_week = f"0{new_week}"
+            else:
+                new_week_string = new_week
+            new_week = f"w{new_week}"
+            self.lineEdit_assName.setText(new_week)
+        else:
+            self.lineEdit_assName.setText("")
+
     def display(self):
+        self.lineEdit_assName.textChanged.connect(self.disable_clone)
+        self.disable_clone()
+        self.comboBox_assignments.currentTextChanged.connect(self.generate_auto_next_week)
+        self.generate_auto_next_week()
         text = self.comboBox_assignments.currentText()
         if not text == "":
             content, filename, error = getParams(module, text)
@@ -923,25 +963,41 @@ class ViewAssignmentDialog(QDialog, Ui_Dialog_View_Assignment):
                 self.submit_filepath = filename
                 self.checkBox_edit.setEnabled(True)
                 self.checkBox_delete.setEnabled(True)
+                self.pushButton_edit_help.setEnabled(True)
         else:
             create_message_box("Choose an assignment first")
+
+    def set_file_content(self, contents):
+        contents_not_empty = contents != ""
+        self.checkBox_clone.setEnabled(self.lineEdit_assName.text().strip() != "" and contents_not_empty)
+        self.checkBox_edit.setEnabled(contents_not_empty)
+        self.checkBox_delete.setEnabled(contents_not_empty)
+        self.pushButton_edit_help.setEnabled(contents_not_empty)
+        self.textEdit_showFileContent.setText(contents)
 
     def clone_assignment(self):
         if self.checkBox_clone.isChecked():
             assignment_name = self.lineEdit_assName.text().strip()
 
             if assignment_name != "":
-                contents = self.validateYaml()
+                contents = self.validateYaml(self.textEdit_showFileContent.toPlainText())
                 if contents is not None:
-                    if not cloneAssignment(module, assignment_name, contents):
+                    cloned, error = cloneAssignment(module, assignment_name, contents)
+                    if not error:
                         create_message_box("Assignment cloned successfully")
-                        self.close()
+                        self.comboBox_assignments.addItem(assignment_name)
+                        self.comboBox_assignments.setCurrentText(assignment_name)
+                        self.checkBox_clone.setChecked(False)
+                        self.set_file_content(cloned['contents'])
+                        self.submit_filepath = cloned['path']
+                        return True
+
+                return False
             else:
                 create_message_box("If cloning this assignment, you must provide a new assignment name")
+                return False
 
-    def validateYaml(self):
-        contents = self.textEdit_showFileContent.toPlainText()
-
+    def validateYaml(self, contents):
         try:
             yaml.safe_load(contents)
             # if loaded without throwing exception, it's ok
@@ -953,11 +1009,14 @@ class ViewAssignmentDialog(QDialog, Ui_Dialog_View_Assignment):
 
     def edit_assignment(self):
         if self.checkBox_edit.isChecked():
-            contents = self.validateYaml()
-            data: dict = yaml.safe_load(contents)
-            dialog = CreateOneOffAssignmentDialog(self, existing_assignment=data, assignment_path=self.submit_filepath)
-            dialog.show()
-            self.close()
+            self.checkBox_edit.setChecked(False)
+            contents = self.validateYaml(self.textEdit_showFileContent.toPlainText())
+            if contents is not None:
+                data: dict = yaml.safe_load(contents)
+                dialog = CreateOneOffAssignmentDialog(self, existing_assignment=data, assignment_path=self.submit_filepath)
+                dialog.show()
+                return True
+            return False
 
     def confirm_deletion(self):
         ret = QMessageBox.question(self,'', "Are you sure to delete this assignment?", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
@@ -967,10 +1026,15 @@ class ViewAssignmentDialog(QDialog, Ui_Dialog_View_Assignment):
     def delete_assignment(self):
         if self.checkBox_delete.isChecked():
             if self.confirm_deletion():
-                error = deleteAssignment(module, self.comboBox_assignments.currentText())
+                assignment = self.comboBox_assignments.currentText()
+                error = deleteAssignment(module, assignment)
                 if not error:
                     create_message_box("Assignment deleted successfully")
-                    self.close()
+                    self.comboBox_assignments.removeItem(self.comboBox_assignments.findText(assignment))
+                    self.checkBox_delete.setChecked(False)
+                    self.set_file_content("")
+                    if self.comboBox_assignments.count() == 0:
+                        self.close()
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
