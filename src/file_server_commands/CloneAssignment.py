@@ -6,6 +6,7 @@ from file_server_commands.AbstractCommand import AbstractCommand
 from handin_messaging import *
 import logging
 from handin_file_server import *
+import definitions
 
 class CloneAssignment(AbstractCommand):
     COMMAND = FileServerCommands.CLONE_ASSIGNMENT
@@ -23,7 +24,18 @@ class CloneAssignment(AbstractCommand):
                     shutil.copy(file_path, assignment_path)
                     tests[test_key][file] = assignment_path + "/" + getFileNameFromPath(file_path)
 
-    def doClone(self, assignment_path, contents):
+    def generateDates(self, module, week_number, assignment):
+        definitions_path = const.get_definitions_file_path(module)
+        date_format = "%Y-%m-%d %H:%M"
+        if os.path.isfile(definitions_path):
+            with open(definitions_path, 'r') as stream:
+                definitions_loaded = yaml.safe_load(stream)
+            dates = definitions.calculate_dates(week_number, definitions_loaded)
+            assignment['startDay'] = dates[0].strftime(date_format)
+            assignment['endDay'] = dates[1].strftime(date_format)
+            assignment['cutoffDay'] = dates[2].strftime(date_format)
+
+    def doClone(self, module, assignment_name, assignment_path, contents):
         data: dict = yaml.safe_load(contents)
 
         if "tests" in data:
@@ -35,6 +47,11 @@ class CloneAssignment(AbstractCommand):
 
         filename = os.path.join(assignment_path + "/params.yaml")
         logging.debug(f"Creating file {filename}")
+
+        if definitions.is_week_number(assignment_name):
+            assignment_name = definitions.normalize_week_number(assignment_name)
+            data['weekNumber'] = assignment_name
+            self.generateDates(module, assignment_name, data)
 
         with open(filename, 'w+') as file:
             yaml.dump(data, file, default_flow_style=False)
@@ -86,7 +103,7 @@ class CloneAssignment(AbstractCommand):
             logging.debug(f"Creating directory {newAssignmentPath}")
             os.makedirs(newAssignmentPath)
 
-            self.doClone(newAssignmentPath, content)
+            self.doClone(module, assignment, newAssignmentPath, content)
 
             request_ok("CLONE_ASSIGNMENT")
             respond(request, True, "CLONE_ASSIGNMENT successful")

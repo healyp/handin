@@ -75,6 +75,7 @@ def normalize_week_number(week_number):
     normalize_week_number
 """
 def is_week_number(string):
+    string = string.lower()
     longWeek = re.compile(LONG_WEEK_REGEX)
     shortWeek = re.compile(SHORT_WEEK_REGEX)
 
