@@ -9,6 +9,8 @@ from subprocess import Popen, PIPE
 import shutil
 import yaml
 
+import definitions
+
 import const
 
 from handin_student_template import send_message, recv_message # these are the methods the handin_student script will use to communicate with this server, so import them from it
@@ -40,41 +42,56 @@ def getPenaltyPerDay(module_code, assignment_name):
         print("ERROR: penaltyPerDay doesn't exist!!!")
         return "False"
 
-def getStartDay(module_code, assignment_name):
-    """get start day for a module"""
+def getDefinitionsDate(date_tag, definitions_dates):
+    if definitions_dates is not None:
+        if date_tag == "startDay":
+            return definitions_dates[0]
+        elif date_tag == "endDay":
+            return definitions_dates[1]
+        elif date_tag == "cutoffDay":
+            return definitions_dates[2]
+        else:
+            return None
+    else:
+        return None
+
+def getDate(date_tag, definitions_dates, params):
+    date = None
+    if date_tag in params:
+        date = params[date_tag]
+        if date == "":
+            return getDefinitionsDate(date_tag, definitions_dates)
+        else:
+            dt_format = "%Y-%m-%d %H:%M"
+            return datetime.strptime(date, dt_format)
+    else:
+        return getDefinitionsDate(date_tag, definitions_dates)
+
+def getDates(module_code, assignment_name):
+    """get the assignment dates"""
     params_filepath = const.get_params_file_path(module_code, assignment_name)
+    definitions_filepath = const.get_definitions_file_path(module_code)
+    definitions_loaded = None
+    definitions_dates = None
+
     with open(params_filepath, 'r') as stream:
         data = yaml.safe_load(stream)
-    if data.get("startDay"):
-        return str(data.get("startDay"))
+
+    weekNumber = data['weekNumber']
+
+    if os.path.isfile(definitions_filepath):
+        with open(definitions_filepath, 'r') as stream:
+            definitions_loaded = yaml.safe_load(stream)
+        definitions_dates = definitions.calculate_dates(weekNumber, definitions_loaded)
+
+    startDay = getDate('startDay', definitions_dates, data)
+    endDay = getDate('endDay', definitions_dates, data)
+    cutoffDay = getDate('cutoffDay', definitions_dates, data)
+
+    if startDay is None or endDay is None or cutoffDay is None:
+        return None
     else:
-        print("ERROR: startDay doesn't exist!!!")
-        return "False"
-
-
-def getEndDay(module_code, assignment_name):
-    """get end day for a module"""
-    params_filepath = const.get_params_file_path(module_code, assignment_name)
-    with open(params_filepath, 'r') as stream:
-        data = yaml.safe_load(stream)
-    if data.get("endDay"):
-        return str(data.get("endDay"))
-    else:
-        print("ERROR: endDay doesn't exist!!!")
-        return "False"
-
-
-def getCutoffDay(module_code, assignment_name):
-    """get cutoff day for a module"""
-    params_filepath = const.get_params_file_path(module_code, assignment_name)
-    with open(params_filepath, 'r') as stream:
-        data = yaml.safe_load(stream)
-    if data.get("cutoffDay"):
-        return str(data.get("cutoffDay"))
-    else:
-        print("ERROR: cutoffDay doesn't exist!!!")
-        return "False"
-
+        return (startDay, endDay, cutoffDay)
 
 def get_required_code_filename(module_code, assignment_name) -> str:
     params_path = const.get_params_file_path(module_code, assignment_name)
@@ -261,33 +278,26 @@ def checkLatePenalty(name, sock):
     if penalty_per_day == "False":
         send_message("ERROR: penaltyPerDay doesn't exist!!!", sock)
 
-    start_day: str = getStartDay(module_code, assignment_name)
-    if start_day == "False":
-        send_message("ERROR: startDay doesn't exist!!!", sock)
+    dates = getDates(module_code, assignment_name)
 
-    end_day: str = getEndDay(module_code, assignment_name)
-    if end_day == "False":
-        send_message("ERROR: endDay doesn't exist!!!", sock)
+    if dates is None:
+        send_message("assignment parameters are poorly defined or module definitions do not exist! Contact the lecturer", sock)
+    else:
+        start_day = dates[0]
+        end_day = dates[1]
+        cutoff_day = dates[2]
+        now: datetime = datetime.now()
 
-    cutoff_day: str = getCutoffDay(module_code, assignment_name)
-    if cutoff_day == "False":
-        send_message("ERROR: cutoffDay doesn't exist!!!", sock)
-
-    dt_format = "%Y-%m-%d %H:%M"
-    start_day: datetime = datetime.strptime(start_day, dt_format)
-    end_day: datetime = datetime.strptime(end_day, dt_format)
-    cutoff_day: datetime = datetime.strptime(cutoff_day, dt_format)
-    now: datetime = datetime.now()
-    if now < start_day:
-        send_message("Submission too early!", sock)
-    elif now > cutoff_day:
-        send_message("You have missed the cutoff day, you are not allowed to submit now!", sock)
-    elif start_day < now < end_day:
-        # no late penalty applied
-        send_message("0", sock)
-    elif end_day < now < cutoff_day:
-        hours_delta = (now - end_day).seconds // 3600
-        send_message(str((hours_delta // 24 + 1) * penalty_per_day), sock)
+        if now < start_day:
+            send_message("Submission too early!", sock)
+        elif now > cutoff_day:
+            send_message("You have missed the cutoff day, you are not allowed to submit now!", sock)
+        elif start_day < now < end_day:
+            # no late penalty applied
+            send_message("0", sock)
+        elif end_day < now < cutoff_day:
+            hours_delta = (now - end_day).seconds // 3600
+            send_message(str((hours_delta // 24 + 1) * penalty_per_day), sock)
     RetrCommand(name, sock)
 
 def checkCollectionFilename(name, sock):

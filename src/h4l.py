@@ -5,7 +5,7 @@ import logging
 import yaml
 
 from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtCore import QDate, QRegExp, QDateTime
+from PyQt5.QtCore import QDate, QTime, QRegExp, QDateTime
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtWidgets import QMainWindow, QDialog, QMessageBox, QLineEdit, QGroupBox, QTableWidgetItem
 
@@ -28,6 +28,8 @@ from datetime import date
 
 import const
 from const import whatAY, containsValidDay, getFileNameFromPath
+
+import definitions as _definitions
 
 from h4l_requests import *
 
@@ -352,6 +354,7 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         self.removeButton.clicked.connect(lambda: self.removeTest())
 
         self.weekNumber_comboBox.addItems(["w01", "w02", "w03", "w04", "w05", "w06", "w07", "w07", "w08", "w09", "w10", "w11", "w12", "w13"])
+        self.weekNumber_comboBox.currentTextChanged.connect(self.auto_generate_dates)
         self.lineEdit_filterCommand.setDisabled(True)
 
         for groupBox in self.findChildren(QGroupBox):
@@ -374,6 +377,36 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         self.assignment_path = assignment_path
         self.changed_files = {} # keeps track of files that have changed since the editing started so that to signal that re-upload needs to occur
         self.loadFromExisting()
+        self.setupAutoDateCheckbox()
+
+    def setupAutoDateCheckbox(self):
+        if len(definitions) == 0:
+            self.autoGenerate_checkBox.setEnabled(False)
+            self.autoGenerate_checkBox.setToolTip("Create definitions to use this feature")
+        else:
+            self.autoGenerate_checkBox.setEnabled(True)
+            self.autoGenerate_checkBox.setToolTip("Generate start, end and cutoff days based on the definitions file and the provided week number")
+
+        self.autoGenerate_checkBox.stateChanged.connect(self.auto_generate_dates)
+
+    def auto_generate_dates(self):
+        if self.autoGenerate_checkBox.isChecked() and self.autoGenerate_checkBox.isEnabled():
+            week_number = self.weekNumber_comboBox.currentText().strip()
+            dates = _definitions.calculate_dates(week_number, definitions)
+            if dates is not None:
+                startDay = dates[0]
+                endDay = dates[1]
+                cutoffDay = dates[2]
+                if startDay is not None:
+                    startDay = startDay.strftime("%Y-%m-%d %H:%M")
+                    self.dateTimeEdit_startDay.setDateTime(QDateTime.fromString(startDay, "yyyy-MM-dd HH:mm"))
+                if endDay is not None:
+                    endDay = endDay.strftime("%Y-%m-%d %H:%M")
+                    self.dateTimeEdit_endDay.setDateTime(QDateTime.fromString(endDay, "yyyy-MM-dd HH:mm"))
+                if cutoffDay is not None:
+                    cutoffDay = cutoffDay.strftime("%Y-%m-%d %H:%M")
+                    self.dateTimeEdit_cutoffDay.setDateTime(QDateTime.fromString(cutoffDay, "yyyy-MM-dd HH:mm"))
+
 
     def loadExistingTests(self, tests: dict):
         self.tests = tests
@@ -950,7 +983,10 @@ class CreateDefinitionsDialog(QDialog, Ui_Dialog_Create_Definitions):
         super(CreateDefinitionsDialog, self).__init__(parent)
         self.setupUi(self)
         self.dateEdit_startSemester.setDisplayFormat("yyyy-MM-dd")
+        self.dateEdit_stylesheet = self.dateEdit_startSemester.styleSheet()
         self.dateEdit_startSemester.setDate(QDate.currentDate())
+        self.dateEdit_startSemester.dateChanged.connect(self.disable_ok)
+        self.timeEdit.setTime(QTime(23, 59, 00))
         # Academic Year format: 2020-2021-S1
         self.regexAY = "\\d{4}-\\d{4}-S[1,2]"
         # self.lineEdit_academicYear.setPlaceholderText(whatAY())
@@ -959,21 +995,45 @@ class CreateDefinitionsDialog(QDialog, Ui_Dialog_Create_Definitions):
         self.buttonBox.setEnabled(False)
         # self.lineEdit.textChanged.connect(self.disable_buttonbox)
         self.label_module.setText(module)
-        # self.lineEdit_2.textChanged.connect(self.disable_buttonbox)
-        # self.lineEdit_3.textChanged.connect(self.disable_buttonbox)
-        # self.lineEdit_4.textChanged.connect(self.disable_buttonbox)
+        self.lineEdit_2.textChanged.connect(self.disable_ok)
+        self.lineEdit_styleSheet = self.lineEdit_2.styleSheet()
+        self.lineEdit_3.textChanged.connect(self.disable_ok)
+        self.lineEdit_4.textChanged.connect(self.disable_ok)
+
+        self.error_stylesheet = "border: 1px solid red;"
+
         self.buttonBox.setEnabled(True)
         self.set_existing_definitions()
 
-    # def disable_buttonbox(self):
-    #     # len(self.lineEdit.text()) > 0 and \
-    #     # goodcode = isMatchRegex(regex=ModCodeRE, text=module)
-    #     # self.buttonBox.setEnabled(goodcode)
-    #     # print(goodcode)
-    #     # check three dates for validity
-    #     allValid = validDefaultDate(self.lineEdit_2.text()) and validDefaultDate(self.lineEdit_3.text()) and validDefaultDate(self.lineEdit_4.text())
-    #     print(allValid)
-    #     self.buttonBox.setEnabled(allValid)
+    def disable_ok(self):
+        enable = True
+        btn_apply = self.buttonBox.button(QtWidgets.QDialogButtonBox.Ok)
+
+        defWeek01 = self.dateEdit_startSemester.text().strip()
+        dow = date.fromisoformat(defWeek01).isoweekday()
+        if dow != 1:
+            btn_apply.setEnabled(False)
+            self.dateEdit_startSemester.setStyleSheet(self.error_stylesheet)
+            self.dateEdit_startSemester.setToolTip(f"Given 'Monday, Week01' of {defWeek01} is not a Monday.")
+            return
+        else:
+            self.dateEdit_startSemester.setToolTip(None)
+            self.dateEdit_startSemester.setStyleSheet(self.dateEdit_stylesheet)
+
+        line_edits = [self.lineEdit_2, self.lineEdit_3, self.lineEdit_4]
+
+        for line_edit in line_edits:
+            text = line_edit.text().strip()
+            if text == "" or not _definitions.validate_date_format(text):
+                line_edit.setStyleSheet(self.error_stylesheet)
+                line_edit.setToolTip(f"Must match {_definitions.FORMAT_REGEX}")
+                enable = False
+            else:
+                line_edit.setStyleSheet(self.lineEdit_styleSheet)
+                line_edit.setToolTip(None)
+                enable = enable and True
+
+        btn_apply.setEnabled(enable)
 
     def set_existing_definitions(self):
         global definitions
@@ -988,6 +1048,12 @@ class CreateDefinitionsDialog(QDialog, Ui_Dialog_Create_Definitions):
             if 'defCutoffDate' in definitions:
                 self.lineEdit_4.setText(definitions['defCutoffDate'])
 
+    def add_time_to_date_format(self, date_format, time):
+        if date_format.find("%t") == -1:
+            return date_format + " %t" + time
+        else:
+            return date_format
+
     def create_definitions(self):
         module_code: str = module
         ay: str = self.lineEdit_academicYear.text().strip()
@@ -999,14 +1065,11 @@ class CreateDefinitionsDialog(QDialog, Ui_Dialog_Create_Definitions):
                 return
 
             defWeek01 = self.dateEdit_startSemester.text().strip()
-            dow = date.fromisoformat(defWeek01).isoweekday()
-            if dow != 1:
-                create_message_box(f"Given 'Monday, Week01' of {defWeek01} is not a Monday.")
-                return
 
-            defOpenDate = self.lineEdit_2.text().strip()
-            defDueDate = self.lineEdit_3.text().strip()
-            defCutoffDate = self.lineEdit_4.text().strip()
+            time = self.timeEdit.text().strip()
+            defOpenDate = self.add_time_to_date_format(self.lineEdit_2.text().strip(), time)
+            defDueDate = self.add_time_to_date_format(self.lineEdit_3.text().strip(), time)
+            defCutoffDate = self.add_time_to_date_format(self.lineEdit_4.text().strip(), time)
 
             if self.create_files(module_code, ay):
                 self.update_definitions_file(

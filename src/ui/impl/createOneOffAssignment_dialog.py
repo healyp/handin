@@ -252,6 +252,9 @@ class Ui_Dialog(object):
         self.cancel = QtWidgets.QPushButton(Dialog)
         self.cancel.setGeometry(QtCore.QRect(560, 880, 80, 23))
         self.cancel.setObjectName("cancel")
+        self.autoGenerate_checkBox = QtWidgets.QCheckBox(Dialog)
+        self.autoGenerate_checkBox.setGeometry(QtCore.QRect(410, 130, 171, 21))
+        self.autoGenerate_checkBox.setObjectName("autoGenerate_checkBox")
 
         self.retranslateUi(Dialog)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
@@ -296,3 +299,4 @@ class Ui_Dialog(object):
         self.label_20.setText(_translate("Dialog", "Added Tests:"))
         self.create.setText(_translate("Dialog", "Create"))
         self.cancel.setText(_translate("Dialog", "Cancel"))
+        self.autoGenerate_checkBox.setText(_translate("Dialog", "Auto-generate dates"))
