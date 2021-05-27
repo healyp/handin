@@ -3,3 +3,4 @@ src/__pycache__/
 src/ui/impl/__pycache__/
 .handin/handin_file_server.log
 .handin/registration.log
+.idea

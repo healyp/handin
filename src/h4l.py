@@ -1,10 +1,8 @@
 import re
-import sys
-import logging
 
 import yaml
 
-from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5 import QtCore
 from PyQt5.QtCore import QDate, QTime, QRegExp, QDateTime
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtWidgets import QMainWindow, QDialog, QMessageBox, QLineEdit, QGroupBox, QTableWidgetItem
@@ -13,9 +11,7 @@ from traceback import format_exc
 
 from getmac import get_mac_address as gma
 
-from ui.impl.createOneOffAssignment_dialog import Ui_Dialog as Ui_Dialog_CreateOneOffAssignment
-from ui.impl.create_repeat_assignments_dialog import Ui_Dialog as Ui_Dialog_Create_Repeat_Assignments
-from ui.impl.handin_lecturer_dialog import Ui_Dialog as Ui_Dialog_main
+from ui.impl.createAssignment_dialog import Ui_Dialog as Ui_Dialog_CreateAssignment
 from ui.impl.manage_student_marks_dialog import Ui_Dialog as Ui_Dialog_Manage_Student_Marks
 from ui.impl.create_definitions_dialog import Ui_Dialog as Ui_Dialog_Create_Definitions
 from ui.impl.view_assignment_dialog import Ui_Dialog as Ui_Dialog_View_Assignment
@@ -26,7 +22,6 @@ from ui.impl.pick_module_dialog import Ui_Dialog as Ui_Dialog_pick_module
 # from dateutil.parser import parse
 from datetime import date
 
-import const
 from const import whatAY, containsValidDay, getFileNameFromPath
 
 import definitions as _definitions
@@ -60,11 +55,11 @@ def create_message_box_mac(lecturer, text):
     msgBox.setWindowTitle("Message")
     msgBox.setStandardButtons(QMessageBox.Close | QMessageBox.Yes | QMessageBox.No)
     ret = msgBox.exec()
-    if(ret == QMessageBox.Yes):
+    if ret == QMessageBox.Yes:
         trustMacAddress(lecturer, "true")
-    elif(ret == QMessageBox.No):
+    elif ret == QMessageBox.No:
         trustMacAddress(lecturer, "false")
-    elif(ret == QMessageBox.Close):
+    elif ret == QMessageBox.Close:
         disconnect()
         sys.exit(0)
 
@@ -73,9 +68,9 @@ def isMatchRegex(regex: str, text: str) -> bool:
 
 def validDefaultDate(given: str):
     if containsValidDay(given) and re.search("%w(\s*[+-]\s*\d+)?", given, re.IGNORECASE):
-        return(True)
+        return True
     else:
-        return(False)
+        return False
 
 class MainWindow(QMainWindow, Ui_MainWindow_Lecturer_Login):
     def __init__(self):
@@ -92,7 +87,7 @@ class MainWindow(QMainWindow, Ui_MainWindow_Lecturer_Login):
             self.label_alert.setText("You need to fill in both fields")
         else:
             authenticated, login_error = checkCredentials(lecturer, password)
-            if(authenticated):
+            if authenticated:
                 self.label_alert.setText("")
                 alert, error = alertMacAddress(lecturer, gma())
                 if not error:
@@ -119,7 +114,7 @@ class PickModuleDialog(QDialog, Ui_Dialog_pick_module):
 
         if not error:
             self.comboBox_modules.addItems(modules)
-            if(len(modules) == 0):
+            if len(modules) == 0:
                 self.pushButton.setEnabled(False)
                 self.label_alert.setGeometry(50, 20, 400, 30)
                 self.label_alert.setText("You have no modules. Contact handin admin to add a module.")
@@ -129,13 +124,12 @@ class PickModuleDialog(QDialog, Ui_Dialog_pick_module):
             self.label_alert.setGeometry(50, 20, 400, 30)
             self.label_alert.setText("An error occurred, please try logging in again")
 
-
     def main_dialog(self):
         global module
         module = self.comboBox_modules.currentText()
-        dialog = MainLecturerDialog()
-        dialog.exec()
-
+        if module != "":
+            dialog = MainLecturerDialog()
+            dialog.exec()
 
 class MainLecturerDialog(QDialog, Ui_Main_Lecturer_Dialog):
     def __init__(self, parent=None):
@@ -164,7 +158,7 @@ class MainLecturerDialog(QDialog, Ui_Main_Lecturer_Dialog):
         dialog.show()
 
     def createOneOffAssignment(self):
-        dialog = CreateOneOffAssignmentDialog(self)
+        dialog = CreateAssignmentDialog(self)
         dialog.show()
 
     def create_definitions(self):
@@ -313,9 +307,9 @@ def map_tests_path(params_path, test_name, path, file):
     server_file_name = f"{test_name}-{file}{extension}"
     return server_directory_relative, server_file_name
 
-class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
+class CreateAssignmentDialog(QDialog, Ui_Dialog_CreateAssignment):
     def __init__(self, parent=None, existing_assignment: dict = None, assignment_path: str = None):
-        super(CreateOneOffAssignmentDialog, self).__init__(parent)
+        super(CreateAssignmentDialog, self).__init__(parent)
         self.setupUi(self)
         self.label_module.setText(module)
         self.dateTimeEdit_startDay.setDisplayFormat("yyyy-MM-dd HH:mm")
@@ -373,6 +367,9 @@ class CreateOneOffAssignmentDialog(QDialog, Ui_Dialog_CreateOneOffAssignment):
         self.existing_assignment = existing_assignment
         self.assignment_path = assignment_path
         self.changed_files = {} # keeps track of files that have changed since the editing started so that to signal that re-upload needs to occur
+
+        self.setWindowTitle("Create Assignment")
+
         self.loadFromExisting()
         self.setupAutoDateCheckbox()
 
@@ -1015,7 +1012,7 @@ class ViewAssignmentDialog(QDialog, Ui_Dialog_View_Assignment):
             contents = self.validateYaml(self.textEdit_showFileContent.toPlainText())
             if contents is not None:
                 data: dict = yaml.safe_load(contents)
-                dialog = CreateOneOffAssignmentDialog(self, existing_assignment=data, assignment_path=self.submit_filepath)
+                dialog = CreateAssignmentDialog(self, existing_assignment=data, assignment_path=self.submit_filepath)
                 dialog.show()
                 return True
             return False
@@ -1041,6 +1038,6 @@ class ViewAssignmentDialog(QDialog, Ui_Dialog_View_Assignment):
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     window = MainWindow()
-    window.show();
+    window.show()
     exit_code = app.exec_()
     sys.exit(exit_code)
