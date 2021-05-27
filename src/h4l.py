@@ -134,7 +134,7 @@ class PickModuleDialog(QDialog, Ui_Dialog_pick_module):
         global module
         module = self.comboBox_modules.currentText()
         dialog = MainLecturerDialog()
-        dialog.show()
+        dialog.exec()
 
 
 class MainLecturerDialog(QDialog, Ui_Main_Lecturer_Dialog):
@@ -145,6 +145,7 @@ class MainLecturerDialog(QDialog, Ui_Main_Lecturer_Dialog):
         self.pushButton_2.clicked.connect(lambda: self.createOneOffAssignment())
         self.pushButton_4.clicked.connect(lambda: self.create_definitions())
         self.pushButton_5.clicked.connect(lambda: self.clone_assignment())
+        self.buttonBox.button(QtWidgets.QDialogButtonBox.Cancel).clicked.connect(self.close)
         self.loadDefinitions()
 
     def loadDefinitions(self):
@@ -894,7 +895,7 @@ class ViewAssignmentDialog(QDialog, Ui_Dialog_View_Assignment):
             self.pushButton_edit_help.clicked.connect(self.print_checkbox_help)
             self.pushButton_edit_help.setEnabled(False)
             self.disable_clone()
-            self.buttonBox.accepted.connect(self.do_ok)
+            self.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).clicked.connect(self.do_ok)
         else:
             create_message_box("An error occurred, please try again")
             self.close()
@@ -931,7 +932,7 @@ class ViewAssignmentDialog(QDialog, Ui_Dialog_View_Assignment):
             self.checkBox_clone.setEnabled(False)
             self.checkBox_clone.setToolTip("Enter an assignment name first")
         else:
-            self.checkBox_clone.setEnabled(True)
+            self.checkBox_clone.setEnabled(self.textEdit_showFileContent.toPlainText() != "")
             self.checkBox_clone.setToolTip(None)
 
     """
@@ -952,7 +953,6 @@ class ViewAssignmentDialog(QDialog, Ui_Dialog_View_Assignment):
 
     def display(self):
         self.lineEdit_assName.textChanged.connect(self.disable_clone)
-        self.disable_clone()
         self.comboBox_assignments.currentTextChanged.connect(self.generate_auto_next_week)
         self.generate_auto_next_week()
         text = self.comboBox_assignments.currentText()
@@ -966,6 +966,8 @@ class ViewAssignmentDialog(QDialog, Ui_Dialog_View_Assignment):
                 self.pushButton_edit_help.setEnabled(True)
         else:
             create_message_box("Choose an assignment first")
+
+        self.disable_clone()
 
     def set_file_content(self, contents):
         contents_not_empty = contents != ""

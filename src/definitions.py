@@ -40,11 +40,20 @@ class ParsedDefinitionsDate:
         self.hours = hours
         self.minutes = minutes
 
+"""
+    Get the date num_weeks from the provided date
+"""
 def _add_weeks(date, num_weeks):
     date = datetime.datetime.strptime(date, DATE_FORMAT)
     delta = datetime.timedelta(days=7 * num_weeks)
     return date + delta
 
+"""
+    Based on the given Monday date and day String (e.g. Tuesday),
+    get the date of the day in that week.
+
+    The date provided is expected to be the Monday of that week
+"""
 def _get_date_of_day(date, day, hours=23, minutes=59):
     day_num = WEEK_DAYS[day]
     delta = datetime.timedelta(days=day_num)
@@ -139,7 +148,15 @@ def _get_date(week_one, week_number, date: ParsedDefinitionsDate):
         date_week = date.week_number
         date_week = date_week - 1 # subtract 1 from the number of weeks to add on to week 1 since week 1 is inclusive
 
+        # since the week number provided is relative to week 1, add the num weeks on to week 1
+        # e.g. if the week is 2 and date is Tuesday, %w, it becomes Tuesday, 2
+        # Since week 1 is inclusive, we only want to add 1 week on to get to week 2, so subtract 1 week
+        # If week 1 starts on 17th May, adding 1 week brings you to 24th May. Now to get to Tuesday,
+        # add on the WEEK_DAY variable for the day. Tuesday is 1, so 24th + 1 is 25th,
+        # so you get 25th May if the week number was week 2
         date_week = _add_weeks(week_one, date_week)
+        # Weeks start at Monday, so adding x weeks onto week 1 brings you to Monday week y. This function gets the date of the day in that week
+        # _add_weeks would return a date represening Monday of week x. Igf you want Wednesday, you need to add on 2 days to the date
         return _get_date_of_day(date_week, date_day, date.hours, date.minutes)
 
     return None
