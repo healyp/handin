@@ -787,7 +787,7 @@
     <string>Added Tests:</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="create">
+  <widget class="QPushButton" name="createButton">
    <property name="geometry">
     <rect>
      <x>660</x>
@@ -800,7 +800,7 @@
     <string>Create</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="cancel">
+  <widget class="QPushButton" name="cancelButton">
    <property name="geometry">
     <rect>
      <x>560</x>

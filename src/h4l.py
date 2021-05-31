@@ -325,8 +325,8 @@ class CreateAssignmentDialog(QDialog, Ui_Dialog_CreateAssignment):
         self.lineEdit_attendance_marks.setValidator(QRegExpValidator(regex))
         self.lineEdit_compilation_marks.setValidator(QRegExpValidator(regex))
         self.lineEdit_marks.setValidator(QRegExpValidator(regex))
-        self.create.clicked.connect(lambda: self.createOneOffAssignment())
-        self.cancel.clicked.connect(lambda: self.cancelClicked())
+        self.createButton.clicked.connect(lambda: self.createOneOffAssignment())
+        self.cancelButton.clicked.connect(lambda: self.cancelClicked())
         self.lineEdit_attendance_marks.textChanged.connect(self.update_total_marks)
         self.lineEdit_compilation_marks.textChanged.connect(self.update_total_marks)
         self.checkBox_inputDataFile.stateChanged.connect(
@@ -357,7 +357,7 @@ class CreateAssignmentDialog(QDialog, Ui_Dialog_CreateAssignment):
         for lineEdit in self.groupBox_customTest1.findChildren(QLineEdit):
             lineEdit.textChanged.connect(self.disable_test_button)
 
-        self.create.setEnabled(False)
+        self.createButton.setEnabled(False)
 
         self.unsaved_test = False # a variable to keep track of if there is a test being added/edited and Add/Edit Test was not clicked
 
@@ -448,7 +448,7 @@ class CreateAssignmentDialog(QDialog, Ui_Dialog_CreateAssignment):
                 self.loadExistingTests(data['tests'])
 
             self.setWindowTitle("Edit Assignment")
-            self.create.setText("Save")
+            self.createButton.setText("Save")
             self.update_total_marks()
 
     def setFileLabelText(self, label, text):
@@ -475,7 +475,7 @@ class CreateAssignmentDialog(QDialog, Ui_Dialog_CreateAssignment):
                     disable = True
                     break
 
-        self.create.setEnabled(not disable)
+        self.createButton.setEnabled(not disable)
 
     def disable_test_list(self, disable):
         if disable:
@@ -680,6 +680,25 @@ class CreateAssignmentDialog(QDialog, Ui_Dialog_CreateAssignment):
 
         return marks_sum
 
+    """
+        This method checks if attendance and or compilation has previously been selected but since been removed
+    """
+    def editCheckAttendanceAndCompilation(self):
+        existing_assignment = self.existing_assignment
+
+        if existing_assignment is not None:
+            tests = existing_assignment["tests"]
+
+            if not self.groupBox_attendance.isChecked() and "attendance" in tests:
+                # we no longer want attendance in our assignment
+                tests.pop("attendance")
+                self.tests.pop("attendance")
+
+            if not self.groupBox_compilation.isChecked() and "compilation" in tests:
+                # we no longer want compilation in our assignment
+                tests.pop("compilation")
+                self.tests.pop("compilation")
+
     def createOneOffAssignment(self):
         if self.unsaved_test:
             create_message_box("Save the test being currently edited first")
@@ -711,8 +730,10 @@ class CreateAssignmentDialog(QDialog, Ui_Dialog_CreateAssignment):
             assignment_exists = False
             error = False # fool it into thinking the assignment doesn't exist
             self.params_path = self.assignment_path
+            self.editCheckAttendanceAndCompilation()
         else:
             assignment_exists, error = checkAssignmentExists(module_code, const.whatAY(), assName)
+
         if not error:
             if not assignment_exists:
                 if self.existing_assignment is not None or self.create_assignment_directory(module_code, assName):

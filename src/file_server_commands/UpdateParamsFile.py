@@ -1,5 +1,4 @@
-import os
-import yaml
+import shlex
 from const import *
 from file_server_commands.AbstractCommand import AbstractCommand
 from handin_messaging import *
@@ -11,6 +10,28 @@ class UpdateParamsFile(AbstractCommand):
 
     def __init__(self):
         super().__init__()
+
+    def escapeCommand(self, command):
+        split_command = shlex.split(command)
+        return shlex.join(split_command) # this should have sufficient escaping
+
+    """
+        Escape the commands in the params file to avoid security gaps
+    """
+    def escapeCommands(self, params: dict):
+        if "tests" in params:
+            tests = params["tests"]
+            for key, val in tests.items():
+                if "command" in val:
+                    command = tests[key]["command"]
+                    if command != "":
+                        tests[key]["command"] = self.escapeCommand(command)
+
+                if "filterCommand" in val:
+                    filterCommand = tests[key]["filterCommand"]
+                    if filterCommand != "":
+                        tests[key]["filterCommand"] = self.escapeCommand(filterCommand)
+
 
     def handleRequest(self, request: Request):
         args = request.args
@@ -46,6 +67,8 @@ class UpdateParamsFile(AbstractCommand):
                 logging.debug(f"File does not exist, creating it")
                 with open(params_file, 'w') as file:
                     pass
+
+            self.escapeCommands(params)
 
             with open(params_file, 'w') as file: # TODO make sure w instead of a is ok
                 # TODO: any more params to add??
