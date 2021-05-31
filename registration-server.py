@@ -1,6 +1,7 @@
 import cgi
 import io
 import os
+import py_compile
 import subprocess
 import logging
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -196,6 +197,9 @@ class RequestHandler(BaseHTTPRequestHandler):
             with open(path, 'r') as f:
                 name = f.readline().strip()
 
+            if name is None or name == "":
+                name = "Not Defined"
+
             return name
 
     def create_handin_file(self, modpath, modcode, student_id, student_name):
@@ -217,8 +221,14 @@ class RequestHandler(BaseHTTPRequestHandler):
                         str(student_id),         # student id
                         str(modcode),        # module code
                         str(self.getModuleName(modcode))
-                     ).encode('utf-8')
-            f.write(content)
+                     )
+
+            python_path = os.path.join(tmpdir, "handin_" + student_id + ".py")
+            with open(python_path, 'w+') as file:
+                file.write(content)
+
+            py_compile.compile(file=python_path, cfile=fpath) # compile the python file to bytecode so the student cannot easily alter the file
+            os.remove(python_path) # delete the python file as we no longer need it
 
     def handle_error(self, msg):
         content = self.error_page.format(path=self.path, msg=msg)
