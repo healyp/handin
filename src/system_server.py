@@ -60,7 +60,6 @@ def getDefinitionsDate(date_tag, definitions_dates):
         return None
 
 def getDate(date_tag, definitions_dates, params):
-    date = None
     if date_tag in params:
         date = params[date_tag]
         if date == "":
@@ -75,7 +74,6 @@ def getDates(module_code, assignment_name):
     """get the assignment dates"""
     params_filepath = const.get_params_file_path(module_code, assignment_name)
     definitions_filepath = const.get_definitions_file_path(module_code)
-    definitions_loaded = None
     definitions_dates = None
 
     with open(params_filepath, 'r') as stream:
@@ -288,20 +286,23 @@ def checkLatePenalty(name, sock):
         cutoff_day = dates[2]
         now: datetime = datetime.now()
 
-        if now < start_day:
-            send_message("Submission too early!", sock)
-        elif now > cutoff_day:
-            send_message("You have missed the cutoff day, you are not allowed to submit now!", sock)
-        elif start_day < now < end_day:
-            # no late penalty applied
-            send_message("0", sock)
-        elif end_day < now < cutoff_day:
-            penalty_per_day: str = getPenaltyPerDay(module_code, assignment_name, end_day, now)
-            if penalty_per_day == "False":
-                send_message("ERROR: penaltyPerDay doesn't exist!!!", sock)
+        if end_day <= start_day or cutoff_day < end_day:
+            send_message("Invalid dates defined for this assignment: Start day < end day and end day must be <= cutoff day. Contact the lecturer", sock)
+        else:
+            if now < start_day:
+                send_message("Submission too early!", sock)
+            elif now > cutoff_day:
+                send_message("You have missed the cutoff day, you are not allowed to submit now!", sock)
+            elif start_day < now < end_day:
+                # no late penalty applied
+                send_message("0", sock)
+            elif end_day < now < cutoff_day:
+                penalty_per_day: str = getPenaltyPerDay(module_code, assignment_name, end_day, now)
+                if penalty_per_day == "False":
+                    send_message("ERROR: penaltyPerDay doesn't exist!!!", sock)
 
-            hours_delta = (now - end_day).seconds // 3600
-            send_message(str((hours_delta // 24 + 1) * penalty_per_day), sock)
+                hours_delta = (now - end_day).seconds // 3600
+                send_message(str((hours_delta // 24 + 1) * penalty_per_day), sock)
     RetrCommand(name, sock)
 
 def checkCollectionFilename(name, sock):
