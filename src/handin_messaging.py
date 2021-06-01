@@ -98,7 +98,16 @@ def retrieve_input(socket):
                 if not input:
                     return ""
 
-            input = input[0:input.index(END_OF_LINE)]
+            lineLength = len(input);
+            index = input.index(END_OF_LINE);
+            startIndex = 0;
+
+            while index != lineLength - len(END_OF_LINE):
+                startIndex = index + 1;
+                index = input.index(END_OF_LINE, startIndex);
+
+
+            input = input[0:index]
 
         return input
 
