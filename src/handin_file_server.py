@@ -1,11 +1,9 @@
 from pydoc import locate
-import yaml
 import sys
 import os
 import signal
 import logging
 import threading
-import file_server_commands
 from file_server_commands.AbstractCommand import AbstractCommand
 from handin_messaging import Request, listenerSocket, acceptSocket, respond
 from traceback import format_exc
