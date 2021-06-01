@@ -212,7 +212,6 @@ def checkIfAssignmentName(name, sock):
 SUBMISSION_DATE_FORMAT = "%Y-%m-%d_%H:%M:%S"
 
 def createVarsFile(name, sock):
-    global archives_path, old_archives
     """Create vars file for a specific student"""
     send_message("OK", sock)
     module_code = recv_message(sock)
@@ -385,7 +384,6 @@ def delete_all_output_files(data_path):
         os.remove(data_path + "/" + f)
 
 def getExecResult(name, sock):
-    global archives_path, old_archives
     """Exec the program and get exec result"""
     send_message("OK", sock)
     module_code = recv_message(sock)
@@ -547,8 +545,6 @@ def getExecResult(name, sock):
         result_msg = "Sorry, you have no attempts left for this assignment!"
         submissions_archive.undo_archive() # unsuccessful submission, remove newest archive and don't remove any old ones
 
-    archives_path = None
-    old_archives = []
     send_message(result_msg, sock)
     RetrCommand(name, sock)
 
