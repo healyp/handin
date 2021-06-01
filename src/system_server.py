@@ -31,13 +31,17 @@ def get_total_attempts(module_code, assignment_name) -> int:
         data: dict = yaml.safe_load(stream)
     return data.get("totalAttempts")
 
-def getPenaltyPerDay(module_code, assignment_name):
+def getPenaltyPerDay(module_code, assignment_name, end_day, now):
     """get penalty per day for a module"""
     params_filepath = const.get_params_file_path(module_code, assignment_name)
     with open(params_filepath, 'r') as stream:
         data = yaml.safe_load(stream)
     if data.get("penaltyPerDay"):
-        return str(data.get("penaltyPerDay"))
+        penalty = int(data.get("penaltyPerDay"))
+        delta = now - end_day
+        penalty = penalty * (delta.days + 1)
+
+        return str(penalty)
     else:
         print("ERROR: penaltyPerDay doesn't exist!!!")
         return "False"
@@ -91,7 +95,7 @@ def getDates(module_code, assignment_name):
     if startDay is None or endDay is None or cutoffDay is None:
         return None
     else:
-        return (startDay, endDay, cutoffDay)
+        return startDay, endDay, cutoffDay
 
 def get_required_code_filename(module_code, assignment_name) -> str:
     params_path = const.get_params_file_path(module_code, assignment_name)
@@ -274,10 +278,6 @@ def checkLatePenalty(name, sock):
     module_code = recv_message(sock)
     assignment_name = recv_message(sock)
 
-    penalty_per_day: str = getPenaltyPerDay(module_code, assignment_name)
-    if penalty_per_day == "False":
-        send_message("ERROR: penaltyPerDay doesn't exist!!!", sock)
-
     dates = getDates(module_code, assignment_name)
 
     if dates is None:
@@ -296,6 +296,10 @@ def checkLatePenalty(name, sock):
             # no late penalty applied
             send_message("0", sock)
         elif end_day < now < cutoff_day:
+            penalty_per_day: str = getPenaltyPerDay(module_code, assignment_name, end_day, now)
+            if penalty_per_day == "False":
+                send_message("ERROR: penaltyPerDay doesn't exist!!!", sock)
+
             hours_delta = (now - end_day).seconds // 3600
             send_message(str((hours_delta // 24 + 1) * penalty_per_day), sock)
     RetrCommand(name, sock)

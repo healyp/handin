@@ -1,3 +1,4 @@
+import datetime
 import re
 
 import yaml
@@ -699,6 +700,24 @@ class CreateAssignmentDialog(QDialog, Ui_Dialog_CreateAssignment):
                 tests.pop("compilation")
                 self.tests.pop("compilation")
 
+    """
+        Ensure that the dates are valid
+    """
+    def validate_dates(self, start_day, end_day, cutoff_day):
+        format_string = "%Y-%m-%d %H:%M"
+        start_day = datetime.datetime.strptime(start_day, format_string)
+        end_day = datetime.datetime.strptime(end_day, format_string)
+        cutoff_day = datetime.datetime.strptime(cutoff_day, format_string)
+
+        if end_day <= start_day:
+            create_message_box("The end day must be after the start day")
+            return False
+        elif not cutoff_day >= end_day:
+            create_message_box("The cutoff day must be on or after the end day")
+            return False
+
+        return True
+
     def createOneOffAssignment(self):
         if self.unsaved_test:
             create_message_box("Save the test being currently edited first")
@@ -714,6 +733,10 @@ class CreateAssignmentDialog(QDialog, Ui_Dialog_CreateAssignment):
         end_day = self.dateTimeEdit_endDay.text().strip()
         cutoff_day = self.dateTimeEdit_cutoffDay.text().strip()
         penalty_per_day = int(self.spinBox_penaltyPerDay.value())
+
+        if not self.validate_dates(start_day, end_day, cutoff_day):
+            return
+
         total_attempts = int(self.spinBox_totalAttempts.value())
         collection_filename = self.lineEdit_collectFilename.text().strip()
         if self.groupBox_attendance.isChecked():
