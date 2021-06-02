@@ -31,15 +31,39 @@ def get_total_attempts(module_code, assignment_name) -> int:
         data: dict = yaml.safe_load(stream)
     return data.get("totalAttempts")
 
+"""
+    Calculate the factor to multiply the penalty percentage by based on the
+    delta produced by date2 - date1
+"""
+def process_delta(date1, date2):
+    delta = date2 - date1
+    days = getattr(delta, 'days', 0)
+    seconds = getattr(delta, 'seconds', 0)
+
+    if days == 0 and seconds != 0:
+        return 1
+    elif days != 0:
+        if seconds != 0:
+            return days + 1
+        else:
+            return days
+    else:
+        return 0
+
+"""
+    Calculate the penalty based on the difference between end_day and now
+"""
+def calculate_penalty(penaltyPerDay, end_day, now):
+    factor = process_delta(end_day, now)
+    return penaltyPerDay * factor
+
 def getPenaltyPerDay(module_code, assignment_name, end_day, now):
     """get penalty per day for a module"""
     params_filepath = const.get_params_file_path(module_code, assignment_name)
     with open(params_filepath, 'r') as stream:
         data = yaml.safe_load(stream)
     if data.get("penaltyPerDay"):
-        penalty = int(data.get("penaltyPerDay"))
-        delta = now - end_day
-        penalty = penalty * (delta.days + 1)
+        penalty = calculate_penalty(int(data.get("penaltyPerDay")), end_day, now)
 
         return str(penalty)
     else:
@@ -301,8 +325,7 @@ def checkLatePenalty(name, sock):
                 if penalty_per_day == "False":
                     send_message("ERROR: penaltyPerDay doesn't exist!!!", sock)
 
-                hours_delta = (now - end_day).seconds // 3600
-                send_message(str((hours_delta // 24 + 1) * penalty_per_day), sock)
+                send_message(str(penalty_per_day), sock)
     RetrCommand(name, sock)
 
 def checkCollectionFilename(name, sock):
@@ -532,8 +555,8 @@ def getExecResult(name, sock):
             result_msg += "</br>You have %s attempts left</br> " % str(attemptsLeft)
 
             # apply penalty
-            curr_marks = curr_marks - int(penalty)
-            result_msg += "</br>Penalty: %s</br> " % str(penalty)
+            curr_marks = int(curr_marks - (curr_marks * (int(penalty) / 100)))
+            result_msg += f"</br>Penalty: {penalty}%</br> "
 
             if curr_marks < 0:
                 curr_marks = 0
@@ -545,7 +568,7 @@ def getExecResult(name, sock):
                 vars_data2["marks"] = curr_marks
             with open(vars_filepath, 'w') as f:
                 yaml.dump(vars_data2, f)
-            result_msg += "</br>Total marks: %s</br> " % str(curr_marks)
+            result_msg += f"</br>Total marks: {curr_marks}</br> "
             submissions_archive.cull_old_archives() # this is a successful submission so, you are free to remove old ones
     else:
         result_msg = "Sorry, you have no attempts left for this assignment!"

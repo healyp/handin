@@ -200,7 +200,7 @@ class HandinMainWindow(QMainWindow, Ui_MainWindow):
         if isinstance(late_penalty_msg, str):
             self.output(late_penalty_msg, flag="ERROR")
         if isinstance(late_penalty_msg, int):
-            self.output("Penalty applied : " + str(late_penalty_msg))
+            self.output("Penalty applied : " + str(late_penalty_msg) + "%")
             penalty = late_penalty_msg
         if penalty != -1:
             # check if the filename matches required filename
