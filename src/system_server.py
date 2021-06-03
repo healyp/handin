@@ -1,11 +1,12 @@
 import os
 import socket
 import signal
+import subprocess
 import threading
 import time
 import sys
 from datetime import datetime
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, TimeoutExpired
 import shutil
 import yaml
 
@@ -497,50 +498,62 @@ def getExecResult(name, sock):
                         # change working directory
                         os.chdir(os.path.dirname(code_filepath))
                         proc = Popen(test_command, stdin=stdin_input, stdout=PIPE, stderr=PIPE, shell=True)
-                        output, stderr = proc.communicate()  # bytes
 
-                        # compare stdout with the answer file
-                        if answer_file_path is not None and answer_file_path != '':
-                            answer_file = open(answer_file_path, 'rb')
-                            answer: bytes = answer_file.read()
+                        try:
+                            output, stderr = proc.communicate(timeout=const.PROGRAM_EXECUTION_TIMEOUT)  # bytes
 
-                            # use stdout and answer as two argv of filter file, then perform filtering
-                            # TODO: may need to be changed ...
-                            if (filter_file_path is not None and filter_file_path != '') and \
-                                    (filter_command is not None and filter_command != ''):
-                                try:
-                                    # copy filter file to student dir
-                                    filter_filename = os.path.basename(filter_file_path)
-                                    filter_file_path_dst = os.path.join(os.path.dirname(code_filepath), filter_filename)
-                                    with open(filter_file_path_dst, 'w'):
-                                        pass
-                                    shutil.copyfile(filter_file_path, filter_file_path_dst)
+                            # compare stdout with the answer file
+                            if answer_file_path is not None and answer_file_path != '':
+                                answer_file = open(answer_file_path, 'rb')
+                                answer = answer_file.read()
 
-                                    os.chdir(os.path.dirname(filter_file_path_dst))
-                                    output = replace_whitespace_with_underscore(output.decode('utf-8')).encode('utf-8')
-                                    answer = replace_whitespace_with_underscore(answer.decode('utf-8')).encode('utf-8')
-                                    command: str = (filter_command + " %s %s") % (output.decode('utf-8'), answer.decode('utf-8'))
-                                    filter_proc = Popen(command, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=True)
-                                    stdout, stderr = filter_proc.communicate()
-                                    output, answer = stdout.decode('utf-8').split(' ')
-                                except Exception as e:
-                                    print(e)
+                                # use stdout and answer as two argv of filter file, then perform filtering
+                                # TODO: may need to be changed ...
+                                if (filter_file_path is not None and filter_file_path != '') and \
+                                        (filter_command is not None and filter_command != ''):
+                                    try:
+                                        # copy filter file to student dir
+                                        filter_filename = os.path.basename(filter_file_path)
+                                        filter_file_path_dst = os.path.join(os.path.dirname(code_filepath),
+                                                                            filter_filename)
+                                        with open(filter_file_path_dst, 'w'):
+                                            pass
+                                        shutil.copyfile(filter_file_path, filter_file_path_dst)
 
-                            output = str(output.decode())
-                            answer = str(answer.decode())
-                            if compare_output_with_answer(output, answer):
-                                # custom test success
-                                curr_marks = curr_marks + test_marks
-                                result_msg += "%s: %d/%d</br> " % (test_tag, test_marks, test_marks)
-                                test_output(vars_directory, key, output, True)
-                            else:
-                                # custom test failed
-                                result_msg += "%s: %d/%d</br> " % (test_tag, 0, test_marks)
-                                test_marks = 0
-                                test_output(vars_directory, key, output, False)
-                                test_output(vars_directory, key, answer, None, "Answer File")
+                                        os.chdir(os.path.dirname(filter_file_path_dst))
+                                        output = replace_whitespace_with_underscore(output.decode('utf-8')).encode(
+                                            'utf-8')
+                                        answer = replace_whitespace_with_underscore(answer.decode('utf-8')).encode(
+                                            'utf-8')
+                                        command: str = (filter_command + " %s %s") % (
+                                        output.decode('utf-8'), answer.decode('utf-8'))
+                                        filter_proc = Popen(command, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=True)
+                                        stdout, stderr = filter_proc.communicate()
+                                        output, answer = stdout.decode('utf-8').split(' ')
+                                    except Exception as e:
+                                        print(e)
+                                else:
+                                    output = str(output.decode())
+                                    answer = str(answer.decode())
 
-                            vars_data[key] = test_marks
+                                if compare_output_with_answer(output, answer):
+                                    # custom test success
+                                    curr_marks = curr_marks + test_marks
+                                    result_msg += "%s: %d/%d</br> " % (test_tag, test_marks, test_marks)
+                                    test_output(vars_directory, key, output, True)
+                                else:
+                                    # custom test failed
+                                    result_msg += "%s: %d/%d</br> " % (test_tag, 0, test_marks)
+                                    test_marks = 0
+                                    test_output(vars_directory, key, output, False)
+                                    test_output(vars_directory, key, answer, None, "Answer File")
+
+                                vars_data[key] = test_marks
+                        except TimeoutExpired as e:
+                            print(e)
+                            proc.kill()
+                            vars_data[key] = 0
+                            result_msg += "%s: 0/%d: Process timeout expired</br> " % (test_tag, test_marks)
 
             # check assignment attempts left and update attempts left
             if "attemptsLeft" in vars_data and vars_data["attemptsLeft"]:

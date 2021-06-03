@@ -36,6 +36,7 @@ FILE_LOG_LEVEL = data['file_server_log_level']
 FILE_HTML_LANDING = data['file_html_landing']
 
 ARCHIVE_NUM = data['archive_num']
+PROGRAM_EXECUTION_TIMEOUT = data['program_execution_timeout']
 
 ModCodeRE = r"^cs\d{4}$"          # UL module code re
 

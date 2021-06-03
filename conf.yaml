@@ -8,3 +8,4 @@ file_server_log_level: 10 # log level for the handin file server. see https://do
 file_html_landing: handin_file_server.html # a html page to show if the handin file server is accessed from a browser
 response_timeout: 3 # timeout in seconds to wait for a response from the server
 archive_num: 3 # number of submission archives to keep as well as the current submission (archive_num + 1 copies of submissions in total), set this to -1 for unlimited archives or 0 to disable it
+program_execution_timeout: 3 # the number of seconds for program execution timeout
