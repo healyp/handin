@@ -1,0 +1,17 @@
+[Unit]
+# DESCRIPTION will be replaced by the install.sh script. It is intended to be the name of the service
+Description={DESCRIPTION}
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+# USER is replaced by the install.sh script and is intended to be the user that the server is run under. The user will need to be in the docker group
+User={USER}
+# SERVER is the python file that runs the server/service. HANDINHOME is the path to the root of the handin project
+ExecStart=/usr/bin/env bash {HANDINHOME}/start_handin {SERVER}
+
+[Install]
+WantedBy=multi-user.target
