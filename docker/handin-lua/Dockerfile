@@ -1,7 +1,5 @@
 FROM ubuntu:18.04
 
-EXPOSE 8580
-
 RUN useradd -ms /bin/bash handin \
     && chown root:handin /home/handin \
     && chmod 1775 /home/handin
