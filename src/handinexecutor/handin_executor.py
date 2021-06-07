@@ -217,7 +217,26 @@ class _Executor:
                 "workdir is not a valid workdir. Use with handin_executor.start() as workdir:")
 
     @staticmethod
-    def _compile(file, compile_command, compilation_profile, workdir) -> ExecutedProcess:
+    def _validate_files_list(files):
+        if files is not None:
+            length = len(files) != 0
+
+            if length == 0:
+                raise HandinExecutorException("An empty list of files was provided. Use None instead")
+
+            for val in files:
+                if not isinstance(val, dict):
+                    raise HandinExecutorException("The list of files provided contains a value that is not a dictionary")
+                else:
+                    keys = val.keys()
+                    if len(keys) != 2:
+                        raise HandinExecutorException("The dictionary for defining a file needs to have only 2 keys")
+                    else:
+                        if "name" not in keys and "content" not in keys:
+                            raise HandinExecutorException("The dictionary for defining a file needs to have name and content")
+
+    @staticmethod
+    def _compile(file, compile_command, compilation_profile, workdir, other_files) -> ExecutedProcess:
         """
             Compiles the file with the provided command, profile and working directory
         """
@@ -226,15 +245,21 @@ class _Executor:
 
         file = os.path.basename(file)
 
+        files = [{'name': file, 'content': code}]
+        _Executor._validate_files_list(other_files)
+
+        if other_files is not None:
+            files.extend(other_files)
+
         result = epicbox.run(compilation_profile, compile_command,
-                             files=[{'name': file, 'content': code}],
+                             files=files,
                              workdir=workdir)
         return ExecutedProcess(tag="compilation", stdout=result["stdout"].decode(),
                                stderr=result["stderr"].decode(), exit_code=result["exit_code"],
                                timeout=result["timeout"])
 
     @staticmethod
-    def _run(file, run_command, run_profile, stdin, workdir) -> ExecutedProcess:
+    def _run(file, run_command, run_profile, stdin, workdir, other_files) -> ExecutedProcess:
         """
             Executes the file by compiling it if compilation_command is not none. If compilation fails,
             an ExecutedProcess with the tag "compilation" is returned with the stderr streams. The code is then run using
@@ -252,6 +277,10 @@ class _Executor:
                 run_command = run_command + " " + file
             files = [{'name': file, 'content': code}]  # skip compilation and run file directly
 
+            if other_files is not None:
+                _Executor._validate_files_list(other_files)
+                files.extend(other_files)
+
             if run_command is None:
                 raise HandinExecutorException("No run_command provided for execution")
             else:
@@ -264,12 +293,13 @@ class _Executor:
                 raise e
             raise HandinExecutorException("An exception occurred executing the file") from e
 
-    def compile(self, path_to_file: str, compile_command: str, language: str = None) -> ExecutedProcess:
+    def compile(self, path_to_file: str, compile_command: str, language: str = None, files: list = None) -> ExecutedProcess:
         """
             Compiles the provided file. If the language does not have a compile profile, it is not a compiled language
             and will be run as an executed process but returned with a compilation tag
 
-            workdir must be obtained from handin_executor.start() in a with statement
+            You can provide an extra list of files that the compilation might require with the files parameter, with each value
+            taking the form {'name': <name>, 'content': contents}
         """
         language = self._deduce_language(path_to_file, language)
 
@@ -277,21 +307,24 @@ class _Executor:
 
         if language + "_compile" not in keys:
             print("Compilation not expected for language " + language + ". Executing instead with tag compilation")
-            proc = self.run(path_to_file, compile_command, language, None)
+            proc = self.run(path_to_file=path_to_file, run_command=compile_command, language=language, stdin=None, files=files)
             proc.tag = "compilation"
             self.last_executed = proc
             return proc
         else:
             proc = self._compile(file=path_to_file, compile_command=compile_command,
-                            compilation_profile=LANGUAGE_PROFILES[language][0], workdir=self._workdir)
+                            compilation_profile=LANGUAGE_PROFILES[language][0], workdir=self._workdir, other_files=files)
             self.last_executed = proc
             return proc
 
-    def run(self, path_to_file: str, run_command: str, language: str = None, stdin: str = None) -> ExecutedProcess:
+    def run(self, path_to_file: str, run_command: str, language: str = None, stdin: str = None, files: list = None) -> ExecutedProcess:
         """
             It takes the path to the file to run on the container and execute on the docker container, the command to run the program,
             an optional language parameter (if not provided, the language is deduced from the file extension). If language cannot
             be determined or is not supported, an exception is thrown.
+
+            You can provide an extra list of files that the execution might require with the files parameter, with each value
+            taking the form {'name': <name>, 'content': contents}
         """
         language = self._deduce_language(path_to_file, language)
 
@@ -302,7 +335,7 @@ class _Executor:
             run_profile = run_profiles[1]
 
         return self._run(file=path_to_file, run_command=run_command, run_profile=run_profile, stdin=stdin,
-                         workdir=self._workdir)
+                         workdir=self._workdir, other_files=files)
 @contextmanager
 def start():
     """

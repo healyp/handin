@@ -88,7 +88,7 @@ LANGUAGE_IMAGE_MAPPINGS = {
 }
 ```
 - If 2 languages can be run by the same container (e.g. c and c++), you may need to 
-modify the Executor._deduce_language method in consts. For example, it has the line for c and c++:
+modify the _Executor._deduce_language method in consts. For example, it has the line for c and c++:
 ```
     if language == "c" or language == "c++":
       return "gcc"
