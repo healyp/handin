@@ -8,10 +8,11 @@
 # If you add the installation directory to PATH, you can start a handin file from anywhere
 
 function print_usage() {
-  echo -e "./install -uninstall | [-u user] [--no-services | -start]\n\t-u user\n\t\tAn optional flag to specify the user to start the handin servers.
+  echo -e "./install -uninstall | [-u user] [--no-services | -start] [--docker]\n\t-u user\n\t\tAn optional flag to specify the user to start the handin servers.
           \tThey must be in the docker group. If left blank, the output of the logname command is used\n\t--no-services\n\t\tSpecify this just to install the start_handin script
           \n\t-start\n\t\tOptional flag to start the services after installation. This doesn't make sense with --no-services, so it's either --no-services or -start, not both
-          \n\t-uninstall\n\t\tUninstalls handin service files and removes the start_handin script\n\n
+          \n\t-uninstall\n\t\tUninstalls handin service files and removes the start_handin script
+          \n\t--docker\n\t\tOptional flag to build the docker images if install is specified or delete them if uninstall is specified\n\n
           This script must be run from the root of the project and as root user if --no-services is not provided.
           Uninstall doesn't require root if it was installed with --no-services"
 }
@@ -63,6 +64,7 @@ function check_root() {
 }
 
 function uninstall() {
+  uninstall_docker="$1"
   uninstalled="false"
   root_checked="false"
 
@@ -102,6 +104,12 @@ function uninstall() {
     uninstalled="true"
   fi
 
+  if [ "$uninstall_docker" == "true" ]; then
+    echo "Removing docker images"
+    docker/build-docker-images.sh --delete
+    uninstalled="true"
+  fi
+
   if [ "$uninstalled" == "true" ]; then
     echo "handin uninstalled"
   else
@@ -113,6 +121,8 @@ COUNT="$#"
 
 user=$(logname)
 services_flag=""
+do_uninstall="false"
+install_docker_images="false"
 
 while [ "$COUNT" -gt "0" ]; do
   case "$1" in
@@ -126,8 +136,9 @@ while [ "$COUNT" -gt "0" ]; do
           COUNT=$(expr $COUNT - 1)
         fi
         ;;
-    -uninstall) uninstall
-                exit 0
+    -uninstall) do_uninstall="true"
+                shift
+                COUNT=$(expr $COUNT - 1)
                 ;;
     -start) if [ ! -z "$services_flag" ]; then
               display_error
@@ -145,13 +156,22 @@ while [ "$COUNT" -gt "0" ]; do
                     COUNT=$(expr $COUNT - 1)
                   fi
                   ;;
-    *) display_error
-        ;;
+    --docker) install_docker_images="true"
+                             shift
+                             COUNT=$(expr $COUNT - 1)
+                             ;;
     -h) print_usage
         exit 0
         ;;
+    *) display_error
+        ;;
   esac
 done
+
+if [ "$do_uninstall" == "true" ]; then
+  uninstall "$install_docker_images"
+  exit 0
+fi
 
 no_services="false"
 start="false"
@@ -195,6 +215,11 @@ if [ "$no_services" == "false" ]; then
 fi
 
 create_start_script "$PWD" "$user"
+
+if [ "$install_docker_images" == "true" ]; then
+  echo "Building docker images"
+  docker/build-docker-images.sh
+fi
 
 if [ "$no_services" == "false" ]; then
   create_service_file "Handin System Server" "$user" "$PWD" "system_server.py" "handin.service"
