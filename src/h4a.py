@@ -95,10 +95,11 @@ class CreateNewModuleDialog(QDialog, Ui_Dialog_Create_New_Module):
         tmpdir = os.path.join(module_dir, "tmp")
         if not os.path.exists(tmpdir):
             os.makedirs(tmpdir) # hey presto!
-        # self.class_list_path = os.path.join(module_dir, "class-list")
-        # if not os.path.exists(self.class_list_path):
-        #     with open(self.class_list_path, "w"):
-        #         pass
+
+        class_list_path = os.path.join(module_dir, "class-list")
+        if not os.path.exists(class_list_path):
+            with open(class_list_path, "w"):
+                pass
 
 class CreateUserDialog(QDialog, Ui_Dialog_Create_User):
     def __init__(self, parent=None):

@@ -6,7 +6,7 @@ import struct
 
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import QFileInfo
-from PyQt5.QtWidgets import QMainWindow
+from PyQt5.QtWidgets import QMainWindow, QMessageBox
 
 # ****** DYNAMIC CONFIGS ****** #
 HOST = "{}"
@@ -155,8 +155,38 @@ class HandinMainWindow(QMainWindow, Ui_MainWindow):
         self.textEdit_showFileContent.setText(content)
         self.submit_filepath = filename
 
+    def confirm_submission(self):
+        assignment_name = self.assignmentName.text().strip()
+
+        msgBox = QMessageBox(self)
+        msgBox.setIcon(QMessageBox.Question)
+        msgBox.setText("Are you sure you want to submit assignment %s? The process can take at least a few seconds, please be patient" % assignment_name)
+        msgBox.setWindowTitle("Handin Submission")
+        msgBox.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+
+        returnValue = msgBox.exec()
+        if returnValue == QMessageBox.Ok:
+            return True
+        else:
+            return False
+
+    def submitted(self):
+        assignment_name = self.assignmentName.text().strip()
+
+        msgBox = QMessageBox(self)
+        msgBox.setIcon(QMessageBox.Information)
+        msgBox.setText("Assignment %s has been submitted successfully. Look at the bottom of the output for your marks" % assignment_name)
+        msgBox.setWindowTitle("Handin Submission")
+        msgBox.setStandardButtons(QMessageBox.Ok)
+
+        msgBox.exec()
+
     def check_handin(self):
         global initVars
+
+        if not self.confirm_submission():
+            return
+
         try:
             s = socket.socket()
             self.output("Started handin...")
@@ -214,6 +244,7 @@ class HandinMainWindow(QMainWindow, Ui_MainWindow):
                 print('send file to server finished ...')
                 result = get_exec_result(MODULE_CODE, assignment_name, STUDENT_ID, s, file_suffix, str(penalty))
                 self.output(result)
+                self.submitted()
             else:
                 self.output(msg, "ERROR")
 

@@ -1,5 +1,4 @@
 from pydoc import locate
-import yaml
 import sys
 import os
 import signal

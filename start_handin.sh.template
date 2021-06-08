@@ -1,0 +1,18 @@
+#! /usr/bin/bash
+
+# This variable will be replaced by the install.sh script. It is the root of the handin project directory
+cd {HANDINHOME}
+
+FILE="$1"
+
+if [ -z "$FILE" ]; then
+  echo "You need to provide a file"
+  exit 2
+fi
+
+if [ ! -f "src/$FILE" ]; then
+  echo "File $FILE not found in source directory"
+  exit 3
+fi
+
+python3 "src/$FILE"
