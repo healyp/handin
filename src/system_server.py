@@ -505,7 +505,7 @@ def getExecResult(name, sock):
                                     test_marks = 0
                                     test_output(vars_directory, key, "Test execution timed out", False)
                                 else:
-                                    if not executor.copy_syscall_log(vars_directory, key):
+                                    if const.PROGRAM_SYSCALL_MONITORING and not executor.copy_syscall_log(vars_directory, key):
                                         print("Warning: failed to copy syscall_monitor log")
 
                                     output = exec1.stdout

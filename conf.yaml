@@ -10,3 +10,4 @@ response_timeout: 3 # timeout in seconds to wait for a response from the server
 archive_num: 3 # number of submission archives to keep as well as the current submission (archive_num + 1 copies of submissions in total), set this to -1 for unlimited archives or 0 to disable it
 program_execution_timeout: 5 # the number of seconds for program execution timeout
 program_memory_limit: 64 # the memory limit of docker containers executing programs in megabytes (MB)
+program_syscall_monitoring : true # pass commands sent to handinexecutor.run into src.cutils/syscall/monitor to log syscalls defined in src/cutils/syscalls.conf

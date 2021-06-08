@@ -183,7 +183,8 @@ class _Executor:
     def __init__(self, workdir):
         self._validate_workdir(workdir)
         self._workdir = workdir
-        self._setup_syscall_monitor()
+        if const.PROGRAM_SYSCALL_MONITORING:
+            self._setup_syscall_monitor()
         self.last_executed = None
 
     @staticmethod
@@ -358,7 +359,8 @@ class _Executor:
         else:
             run_profile = run_profiles[1]
 
-        run_command = "./syscall_monitor " + run_command
+        if const.PROGRAM_SYSCALL_MONITORING:
+            run_command = "./syscall_monitor " + run_command
 
         proc = self._run(file=path_to_file, run_command=run_command, run_profile=run_profile, stdin=stdin,
                          workdir=self._workdir, other_files=files)
@@ -370,18 +372,22 @@ class _Executor:
         Retrieve the syscall monitor log for the syscalls that are considered dangerous that were made, if any, from a previous
         call to run
         :param destination_path: the destination path to copy the file to
+        :param test_tag: the tag to prepend onto syscalls.log as test_tag-syscalls.log
         :return: true if successful, false if not
         """
-        proc = _Executor._run(file=None, run_command="cat syscalls.log", run_profile="gcc_run", stdin=None, workdir=self._workdir, other_files=None)
-        if proc.exit_code == 0 and proc.stderr == "":
-            if os.path.isdir(destination_path):
-                path = f"{destination_path}/{test_tag}-syscalls.log"
-                with open(path, 'w+') as file:
-                    file.write(proc.stdout)
+        if const.PROGRAM_SYSCALL_MONITORING:
+            proc = _Executor._run(file=None, run_command="cat syscalls.log", run_profile="gcc_run", stdin=None, workdir=self._workdir, other_files=None)
+            if proc.exit_code == 0 and proc.stderr == "":
+                if os.path.isdir(destination_path):
+                    path = f"{destination_path}/{test_tag}-syscalls.log"
+                    with open(path, 'w+') as file:
+                        file.write(proc.stdout)
 
-                return True
+                    return True
 
-        return False
+            return False
+        else:
+            raise HandinExecutorException("PROGRAM_SYSCALL_MONITORING is disabled in conf.yaml")
 
 @contextmanager
 def start():
