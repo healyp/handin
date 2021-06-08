@@ -366,8 +366,6 @@ class _Executor:
         if const.PROGRAM_SYSCALL_MONITORING:
             run_command = "./syscall_monitor " + run_command
 
-        print(run_command)
-
         proc = self._run(file=path_to_file, run_command=run_command, run_profile=run_profile, stdin=stdin,
                          workdir=self._workdir, other_files=files)
         self.last_executed = proc
