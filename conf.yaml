@@ -11,3 +11,4 @@ archive_num: 3 # number of submission archives to keep as well as the current su
 program_execution_timeout: 5 # the number of seconds for program execution timeout
 program_memory_limit: 64 # the memory limit of docker containers executing programs in megabytes (MB)
 program_syscall_monitoring : true # pass commands sent to handinexecutor.run into src.cutils/syscall/monitor to log syscalls defined in src/cutils/syscalls.conf
+
