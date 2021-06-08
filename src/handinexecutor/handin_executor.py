@@ -194,7 +194,11 @@ class _Executor:
             The language parameter, if provided, would be provided from the compile_proc or execute methods.
             If language is provided, language is verified and returned
         """
-        filename, file_extension = os.path.splitext(path_to_file)
+        if path_to_file is not None:
+            filename, file_extension = os.path.splitext(path_to_file)
+        else:
+            file_extension = ""
+
         if file_extension == "" and language is None:
             raise HandinExecutorException(
                 "Cannot determine language as file does not have an extension and language is None")
