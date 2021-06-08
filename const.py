@@ -37,6 +37,7 @@ FILE_HTML_LANDING = data['file_html_landing']
 
 ARCHIVE_NUM = data['archive_num']
 PROGRAM_EXECUTION_TIMEOUT = data['program_execution_timeout']
+PROGRAM_MEMORY_LIMIT = data['program_memory_limit']
 
 ModCodeRE = r"^cs\d{4}$"          # UL module code re
 

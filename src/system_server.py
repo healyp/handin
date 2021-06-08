@@ -407,7 +407,7 @@ def test_output(path, test, output, passFail, command=None):
             file.write(output)
 
 def delete_all_output_files(data_path):
-    files = [f for f in os.listdir(data_path) if "output" in f]
+    files = [f for f in os.listdir(data_path) if "output" in f or "syscalls.log" in f]
 
     for f in files:
         os.remove(data_path + "/" + f)
@@ -505,6 +505,9 @@ def getExecResult(name, sock):
                                     test_marks = 0
                                     test_output(vars_directory, key, "Test execution timed out", False)
                                 else:
+                                    if not executor.copy_syscall_log(vars_directory, key):
+                                        print("Warning: failed to copy syscall_monitor log")
+
                                     output = exec1.stdout
                                     if answer_file_path is not None and answer_file_path != '':
                                         answer_file = open(answer_file_path, 'rb')
@@ -552,6 +555,11 @@ def getExecResult(name, sock):
                                             test_marks = 0
                                             test_output(vars_directory, key, output, False)
                                             test_output(vars_directory, key, answer, None, "Answer File")
+                                    else:
+                                        # custom test success
+                                        curr_marks = curr_marks + test_marks
+                                        result_msg += "%s: %d/%d</br> " % (test_tag, test_marks, test_marks)
+                                        test_output(vars_directory, key, output, True)
 
                             vars_data[key] = test_marks
 

@@ -36,6 +36,8 @@ import os
 import subprocess
 from contextlib import contextmanager
 
+import const
+
 _all_ = ['ExecutedProcess', 'HandinExecutorException', 'start']
 
 # The supported profiles which run the associated docker images. If a new language is added, a new docker image must be created for that language,
@@ -112,10 +114,12 @@ def _configure_executor():
     # each time. epicbox also uses /sandbox for its DOCKER_WORKDIR which does not have
     # the correct permissions for user handin
 
+    execution_timeout = int(const.PROGRAM_EXECUTION_TIMEOUT)
+    memory_limit = int(const.PROGRAM_MEMORY_LIMIT)
     epicbox.config.DEFAULT_LIMITS = {
-        'cputime': 3,
-        'realtime': 3,
-        'memory': 64,
+        'cputime': execution_timeout,
+        'realtime': execution_timeout,
+        'memory': memory_limit,
         'processes': -1
     }
     epicbox.config.DOCKER_WORKDIR = "/home/handin"
@@ -179,6 +183,7 @@ class _Executor:
     def __init__(self, workdir):
         self._validate_workdir(workdir)
         self._workdir = workdir
+        self._setup_syscall_monitor()
         self.last_executed = None
 
     @staticmethod
@@ -235,6 +240,18 @@ class _Executor:
                         if "name" not in keys and "content" not in keys:
                             raise HandinExecutorException("The dictionary for defining a file needs to have name and content")
 
+    def _setup_syscall_monitor(self):
+        """
+            Sets up the syscall_monitor.c file for the executor
+        """
+        with open(const.SRCDIR + "/cutils/syscalls.conf", 'rb') as file:
+            config = file.read()
+        files = [{"name": "syscalls.conf", 'content': config}]
+        proc = self.compile(path_to_file=const.SRCDIR + "/cutils/syscall_monitor.c",
+                                compile_command="gcc syscall_monitor.c -o syscall_monitor", language="c", files=files)
+        if proc.exit_code != 0:
+            raise HandinExecutorException("Failed to setup syscall_monitor with stderr: " + proc.stderr)
+
     @staticmethod
     def _compile(file, compile_command, compilation_profile, workdir, other_files) -> ExecutedProcess:
         """
@@ -267,8 +284,12 @@ class _Executor:
 
             The run profile is the profile of the docker images outlined above
         """
-        with open(file, 'rb') as f:
-            code = f.read()
+        if file is not None:
+            with open(file, 'rb') as f:
+                code = f.read()
+        else:
+            file = "not-exists"
+            code = b""
 
         file = os.path.basename(file)
 
@@ -325,6 +346,9 @@ class _Executor:
 
             You can provide an extra list of files that the execution might require with the files parameter, with each value
             taking the form {'name': <name>, 'content': contents}
+
+            run_command is wrapped by a call to syscall_monitor to monitor for dangerous syscalls. The log for it can be retrieved
+            using copy_syscall_log
         """
         language = self._deduce_language(path_to_file, language)
 
@@ -334,8 +358,31 @@ class _Executor:
         else:
             run_profile = run_profiles[1]
 
-        return self._run(file=path_to_file, run_command=run_command, run_profile=run_profile, stdin=stdin,
+        run_command = "./syscall_monitor " + run_command
+
+        proc = self._run(file=path_to_file, run_command=run_command, run_profile=run_profile, stdin=stdin,
                          workdir=self._workdir, other_files=files)
+        self.last_executed = proc
+        return proc
+
+    def copy_syscall_log(self, destination_path: str, test_tag):
+        """
+        Retrieve the syscall monitor log for the syscalls that are considered dangerous that were made, if any, from a previous
+        call to run
+        :param destination_path: the destination path to copy the file to
+        :return: true if successful, false if not
+        """
+        proc = _Executor._run(file=None, run_command="cat syscalls.log", run_profile="gcc_run", stdin=None, workdir=self._workdir, other_files=None)
+        if proc.exit_code == 0 and proc.stderr == "":
+            if os.path.isdir(destination_path):
+                path = f"{destination_path}/{test_tag}-syscalls.log"
+                with open(path, 'w+') as file:
+                    file.write(proc.stdout)
+
+                return True
+
+        return False
+
 @contextmanager
 def start():
     """
