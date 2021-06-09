@@ -170,16 +170,42 @@ class MainLecturerDialog(QDialog, Ui_Main_Lecturer_Dialog):
         dialog = ViewAssignmentDialog(self)
         dialog.show()
 
-
 class ManageStudentMarksDialog(QDialog, Ui_Dialog_Manage_Student_Marks):
     def __init__(self, parent=None):
         super(ManageStudentMarksDialog, self).__init__(parent)
         self.setupUi(self)
         self.comboBox_assignment.currentTextChanged.connect(self.update_table)
         self.label_module.setText(module)
+        self.generate_csv_button.clicked.connect(self.generateCSV)
+        self.checkBox_all_csv.stateChanged.connect(self.updateCSVButton)
 
         if self.loadAssignments():
             self.update_table()
+
+        self.updateCSVButton()
+
+    def updateCSVButton(self):
+        text = self.comboBox_assignment.currentText()
+        if self.checkBox_all_csv.isChecked():
+            self.generate_csv_button.setText("Generate All CSV")
+        else:
+            if text == "":
+                self.generate_csv_button.setDisabled(True)
+            else:
+                self.generate_csv_button.setDisabled(False)
+
+            self.generate_csv_button.setText("Generate CSV")
+
+    def generateCSV(self):
+        text = self.comboBox_assignment.currentText()
+        if self.checkBox_all_csv.isChecked():
+            text = "all"
+        error = generateAssignmentCSV(module, text)
+        if not error:
+            if text == "all":
+                create_message_box("CSV grade reports generated for module " + module + " successfully")
+            else:
+                create_message_box("CSV grade report for assignment " + text + " generated for module " + module + " successfully")
 
     def columnFromLabel(self, label) -> int:
         model = self.tableWidget.horizontalHeader().model()

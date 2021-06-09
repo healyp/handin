@@ -1,7 +1,6 @@
 from const import *
 from file_server_commands.AbstractCommand import AbstractCommand
 from handin_messaging import *
-import handin_file_server
 import logging
 from handin_file_server import *
 

@@ -1,0 +1,24 @@
+collectionFilename: main.c
+cutoffDay: 2021-06-25 23:59
+endDay: 2021-06-14 23:59
+moduleCode: cs4123
+penaltyPerDay: 7
+startDay: 2021-06-07 23:59
+tests:
+  attendance:
+    marks: 5
+    tag: attendance
+  compilation:
+    command: gcc main.c -o main
+    marks: 5
+    tag: compilation
+  test1:
+    answerFile: ''
+    command: ./main
+    filterCommand: ''
+    filterFile: ''
+    inputDataFile: ''
+    marks: 10
+    tag: Run code
+totalAttempts: 10
+weekNumber: w05

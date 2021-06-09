@@ -631,12 +631,6 @@ def check_docker_group():
         return stdout != ""
 
 if __name__ == '__main__':
-    uid = os.getuid()
-    handin_uid = pwd.getpwnam("handin").pw_uid
-
-    if uid != handin_uid:
-        print("WARNING: system_server is running with a user that is not handin. This is dangerous and highly discouraged!\n\tRun: su handin -P -c \"python3 src/system_server.py\"")
-
     s = socket.socket()
     s.bind((host, port))
     s.listen(5)

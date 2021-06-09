@@ -65,7 +65,7 @@ def disconnect():
         s.close()
         logging.info("Disconnected from handin_file_server")
 
-def getModuleCodes() -> list:
+def getModuleCodes() -> tuple[list, bool]:
     global s
     try:
         if setSocket():
@@ -90,18 +90,17 @@ def getModuleCodes() -> list:
             else:
                 s = None
                 error = True
-                if request.error:
-                    logging.error(f"Request Error: {request.error_message}")
+                logging.error(f"Request Error")
         else:
             error = True
-    except (MessagingError) as m:
+    except MessagingError as m:
         s = None
         doError(f"{m}")
         error = True
 
     return [], error
 
-def getModuleAssignments(module_code) -> list:
+def getModuleAssignments(module_code) -> tuple[list, bool]:
     global s
     try:
         if setSocket():
@@ -127,18 +126,17 @@ def getModuleAssignments(module_code) -> list:
             else:
                 s = None
                 error = True
-                if request.error:
-                    logging.error(f"Request Error: {request.error_message}")
+                logging.error(f"Request Error")
         else:
             error = True
-    except (MessagingError) as m:
+    except MessagingError as m:
         s = None
         doError(f"{m}")
         error = True
 
     return [], error
 
-def get_all_test_items(module_code, assignment) -> list:
+def get_all_test_items(module_code, assignment) -> tuple[list, bool]:
     global s
     try:
         if setSocket():
@@ -165,18 +163,17 @@ def get_all_test_items(module_code, assignment) -> list:
             else:
                 s = None
                 error = True
-                if request.error:
-                    logging.error(f"Request Error: {request.error_message}")
+                logging.error(f"Request Error")
         else:
             error = True
-    except (MessagingError) as m:
+    except MessagingError as m:
         s = None
         doError(f"{m}")
         error = True
 
     return [], error
 
-def get_all_student_ids(module_code) -> list:
+def get_all_student_ids(module_code) -> tuple[list, bool]:
     global s
     try:
         if setSocket():
@@ -202,11 +199,10 @@ def get_all_student_ids(module_code) -> list:
             else:
                 s = None
                 error = True
-                if request.error:
-                    logging.error(f"Request Error: {request.error_message}")
+                logging.error(f"Request Error")
         else:
             error = True
-    except (MessagingError) as m:
+    except MessagingError as m:
         s = None
         doError(f"{m}")
         error = True
@@ -246,11 +242,10 @@ def getLecturerModules(lecturer):
             else:
                 s = None
                 error = True
-                if request.error:
-                    logging.error(f"Request Error: {request.error_message}")
+                logging.error(f"Request Error")
         else:
             error = True
-    except (MessagingError) as m:
+    except MessagingError as m:
         s = None
         doError(f"{m}")
         error = True
@@ -290,12 +285,11 @@ def checkCredentials(lect, passw):
                         logging.error(f"Response Error: {response.error_message}")
             else:
                 s = None
-                error = True
-                if request.error:
-                    logging.error(f"Request Error: {request.error_message}")
+                login_error = True
+                logging.error(f"Request Error")
         else:
             login_error = True
-    except (MessagingError) as m:
+    except MessagingError as m:
         s = None
         doError(f"{m}")
         login_error = True
@@ -343,11 +337,10 @@ def alertMacAddress(lecturer, mac):
             else:
                 s = None
                 error = True
-                if request.error:
-                    logging.error(f"Request Error: {request.error_message}")
+                logging.error(f"Request Error")
         else:
             error = True
-    except (MessagingError) as m:
+    except MessagingError as m:
         s = None
         doError(f"{m}")
         error = True
@@ -380,11 +373,10 @@ def trustMacAddress(lecturer, trust):
             else:
                 s = None
                 error = True
-                if request.error:
-                    logging.error(f"Request Error: {request.error_message}")
+                logging.error(f"Request Error")
         else:
             error = True
-    except (MessagingError) as m:
+    except MessagingError as m:
         s = None
         doError(f"{m}")
         error = True
@@ -418,11 +410,10 @@ def get_vars(module, week_number, student_id):
             else:
                 s = None
                 error = True
-                if request.error:
-                    logging.error(f"Request Error: {request.error_message}")
+                logging.error(f"Request Error")
         else:
             error = True
-    except (MessagingError) as m:
+    except MessagingError as m:
         s = None
         doError(f"{m}")
         error = True
@@ -462,12 +453,11 @@ def checkModuleExists(module):
             else:
                 s = None
                 error = True
-                if request.error:
-                    logging.error(f"Request Error: {request.error_message}")
+                logging.error(f"Request Error")
 
         else:
             error = True
-    except (MessagingError) as m:
+    except MessagingError as m:
         s = None
         doError(f"{m}")
         error = True
@@ -509,12 +499,11 @@ def checkAssignmentExists(module, academic_year, assignment):
             else:
                 s = None
                 error = True
-                if request.error:
-                    logging.error(f"Request Error: {request.error_message}")
+                logging.error(f"Request Error")
 
         else:
             error = True
-    except (MessagingError) as m:
+    except MessagingError as m:
         s = None
         doError(f"{m}")
         error = True
@@ -547,12 +536,11 @@ def createAssignmentDirectory(module, assignment_name):
             else:
                 s = None
                 error = True
-                if request.error:
-                    logging.error(f"Request Error: {request.error_message}")
+                logging.error(f"Request Error")
 
         else:
             error = True
-    except (MessagingError) as m:
+    except MessagingError as m:
         s = None
         doError(f"{m}")
         error = True
@@ -585,11 +573,10 @@ def updateParamsFile(params_file, params):
             else:
                 s = None
                 error = True
-                if request.error:
-                    logging.error(f"Request Error: {request.error_message}")
+                logging.error(f"Request Error")
         else:
             error = True
-    except (MessagingError) as m:
+    except MessagingError as m:
         s = None
         doError(f"{m}")
         error = True
@@ -622,11 +609,10 @@ def createDefinitionsFile(module, academic_year):
             else:
                 s = None
                 error = True
-                if request.error:
-                    logging.error(f"Request Error: {request.error_message}")
+                logging.error(f"Request Error")
         else:
             error = True
-    except (MessagingError) as m:
+    except MessagingError as m:
         s = None
         doError(f"{m}")
         error = True
@@ -659,11 +645,10 @@ def updateDefinitionsFile(definitions_file, definitions):
             else:
                 s = None
                 error = True
-                if request.error:
-                    logging.error(f"Request Error: {request.error_message}")
+                logging.error(f"Request Error")
         else:
             error = True
-    except (MessagingError) as m:
+    except MessagingError as m:
         s = None
         doError(f"{m}")
         error = True
@@ -696,11 +681,10 @@ def getDefinitions(module, academic_year):
             else:
                 s = None
                 error = True
-                if request.error:
-                    logging.error(f"Request Error: {request.error_message}")
+                logging.error(f"Request Error")
         else:
             error = True
-    except (MessagingError) as m:
+    except MessagingError as m:
         s = None
         doError(f"{m}")
         error = True
@@ -733,11 +717,10 @@ def getParams(module, assignment):
             else:
                 s = None
                 error = True
-                if request.error:
-                    logging.error(f"Request Error: {request.error_message}")
+                logging.error(f"Request Error")
         else:
             error = True
-    except (MessagingError) as m:
+    except MessagingError as m:
         s = None
         doError(f"{m}")
         error = True
@@ -771,11 +754,10 @@ def cloneAssignment(module, assignment, content):
             else:
                 s = None
                 error = True
-                if request.error:
-                    logging.error(f"Request Error: {request.error_message}")
+                logging.error(f"Request Error")
         else:
             error = True
-    except (MessagingError) as m:
+    except MessagingError as m:
         s = None
         doError(f"{m}")
         error = True
@@ -808,11 +790,10 @@ def deleteAssignment(module, assignment):
             else:
                 s = None
                 error = True
-                if request.error:
-                    logging.error(f"Request Error: {request.error_message}")
+                logging.error(f"Request Error")
         else:
             error = True
-    except (MessagingError) as m:
+    except MessagingError as m:
         s = None
         doError(f"{m}")
         error = True
@@ -831,7 +812,7 @@ def readFileContents(file):
             contents = ""
             with open(file, 'r') as file1:
                 contents = file1.read()
-        except (FileNotFoundError):
+        except FileNotFoundError:
             doError(f"{file} does not exist")
             error = True
 
@@ -866,11 +847,45 @@ def uploadFile(file, destination_path):
                 else:
                     s = None
                     error = True
-                    if request.error:
-                        logging.error(f"Request Error: {request.error_message}")
+                    logging.error(f"Request Error")
         else:
             error = True
-    except (MessagingError) as m:
+    except MessagingError as m:
+        s = None
+        doError(f"{m}")
+        error = True
+
+    return error
+
+def generateAssignmentCSV(module, assignment = 'all') -> bool:
+    global s
+    try:
+        error = False
+        if setSocket():
+            args = {
+                'module': module,
+                'assignment': assignment # for now, we only support all
+            }
+
+            response = request(Request(s, FileServerCommands.GENERATE_ASSIGNMENT_CSV, args))
+
+            if response is not None:
+                if not response.disconnected:
+                    if response.success == "True":
+                        return False
+                    else:
+                        error = True
+                        doError(f"{response.message}")
+                else:
+                    s = None
+                    error = True
+                    if response.error:
+                        logging.error(f"Response Error: {response.error_message}")
+            else:
+                s = None
+                error = True
+                logging.error(f"Request Error")
+    except MessagingError as m:
         s = None
         doError(f"{m}")
         error = True

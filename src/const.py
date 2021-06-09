@@ -59,9 +59,11 @@ class FileServerCommands:
     CLONE_ASSIGNMENT = "clone_assignment"
     DELETE_ASSIGNMENT = "delete_assignment"
     UPLOAD_FILE = "upload_file" # The path to the file should be a relative path as the server will prepend ROOTDIR to it
+    GENERATE_ASSIGNMENT_CSV = "generate_assignment_csv"
     VALID_COMMANDS = [AUTHENTICATE_LECTURER, ALERT_MAC_ADDRESS, TRUST_MAC_ADDRESS, GET_LECTURER_MODULES, MODULE_INFO
                      , GET_VARS, CHECK_EXISTS, CREATE_ASSIGNMENT_DIRECTORY, UPDATE_PARAMS_FILE, CREATE_DEFINITIONS_FILE
-                     , UPDATE_DEFINITIONS_FILE, GET_DEFINITIONS_FILE, GET_PARAMS, CLONE_ASSIGNMENT, DELETE_ASSIGNMENT, UPLOAD_FILE]
+                     , UPDATE_DEFINITIONS_FILE, GET_DEFINITIONS_FILE, GET_PARAMS, CLONE_ASSIGNMENT, DELETE_ASSIGNMENT
+                     , UPLOAD_FILE, GENERATE_ASSIGNMENT_CSV]
 
     @staticmethod
     def validateCommand(command):
@@ -100,16 +102,16 @@ def get_definitions_file_path(module_code):
     return os.path.join(ROOTDIR, module_code, "curr", "definitions.yaml")
 
 
-def get_params_file_path(module_code, week_number):
-    return os.path.join(ROOTDIR, module_code, "curr", "assignments", week_number, "params.yaml")
+def get_params_file_path(module_code, assignment_name):
+    return os.path.join(ROOTDIR, module_code, "curr", "assignments", assignment_name, "params.yaml")
 
 
-def get_vars_file_path(module_code, week_number, student_id):
-    return os.path.join(ROOTDIR, module_code, "curr", "data", student_id, week_number, "vars.yaml")
+def get_vars_file_path(module_code, assignment_name, student_id):
+    return os.path.join(ROOTDIR, module_code, "curr", "data", student_id, assignment_name, "vars.yaml")
 
 
-def get_program_file_path(module_code, week_number, student_id, filename_code):
-    return os.path.join(ROOTDIR, module_code, "curr", "data", student_id, week_number, filename_code)
+def get_program_file_path(module_code, assignment_name, student_id, filename_code):
+    return os.path.join(ROOTDIR, module_code, "curr", "data", student_id, assignment_name, filename_code)
 
 """
 Check if an /instance/ of a module exists; instance=code+"curr"
