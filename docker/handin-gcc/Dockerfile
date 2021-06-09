@@ -8,6 +8,7 @@ RUN apt-get -y update && apt-get -y install \
                     software-properties-common \
                    && add-apt-repository ppa:deadsnakes/ppa \
                    && apt-get -y install \
+                        strace \
                         g++ \
                         freeglut3-dev \
                         libglu1-mesa-dev \

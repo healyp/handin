@@ -8,6 +8,7 @@ RUN apt-get -y update && apt-get -y install \
                     software-properties-common \
                    && add-apt-repository ppa:deadsnakes/ppa \
                    && apt-get -y install \
+                        strace \
                         python \
                         python3.9 \
                         && rm -rf /var/lib/apt/lists/*

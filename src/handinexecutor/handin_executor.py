@@ -184,7 +184,7 @@ class _Executor:
         self._validate_workdir(workdir)
         self._workdir = workdir
         if const.PROGRAM_SYSCALL_MONITORING:
-            self._setup_syscall_monitor()
+            self._setup_pmonitor()
         self.last_executed = None
 
     @staticmethod
@@ -245,17 +245,21 @@ class _Executor:
                         if "name" not in keys and "content" not in keys:
                             raise HandinExecutorException("The dictionary for defining a file needs to have name and content")
 
-    def _setup_syscall_monitor(self):
+    def _setup_pmonitor(self):
         """
-            Sets up the syscall_monitor.c file for the executor
+            Sets up the pmonitor.sh file for the executor
         """
-        with open(const.SRCDIR + "/cutils/syscalls.conf", 'rb') as file:
+        with open(const.SRCDIR + "/pmonitor/syscalls.conf", 'rb') as file:
             config = file.read()
         files = [{"name": "syscalls.conf", 'content': config}]
-        proc = self.compile(path_to_file=const.SRCDIR + "/cutils/syscall_monitor.c",
-                                compile_command="gcc syscall_monitor.c -o syscall_monitor", language="c", files=files)
+        proc = _Executor._compile(file=const.SRCDIR + "/pmonitor/pmonitor.sh",
+                                compile_command="gcc --version", compilation_profile="gcc_compile", workdir=self._workdir, other_files=files) # dummy call to gcc just to copy pmonitor.sh to the docker
         if proc.exit_code != 0:
-            raise HandinExecutorException("Failed to setup syscall_monitor with stderr: " + proc.stderr)
+            raise HandinExecutorException("Failed to setup pmonitor with stderr: " + proc.stderr)
+
+        proc = _Executor._run(None, "chmod +x pmonitor.sh", "gcc_compile", None, self._workdir, None)
+        if proc.exit_code != 0:
+            raise HandinExecutorException("Failed to setup pmonitor with stderr: " + proc.stderr)
 
     @staticmethod
     def _compile(file, compile_command, compilation_profile, workdir, other_files) -> ExecutedProcess:
@@ -276,6 +280,7 @@ class _Executor:
         result = epicbox.run(compilation_profile, compile_command,
                              files=files,
                              workdir=workdir)
+
         return ExecutedProcess(tag="compilation", stdout=result["stdout"].decode(),
                                stderr=result["stderr"].decode(), exit_code=result["exit_code"],
                                timeout=result["timeout"])
@@ -364,7 +369,7 @@ class _Executor:
             run_profile = run_profiles[1]
 
         if const.PROGRAM_SYSCALL_MONITORING:
-            run_command = "./syscall_monitor " + run_command
+            run_command = "./pmonitor.sh " + run_command
 
         proc = self._run(file=path_to_file, run_command=run_command, run_profile=run_profile, stdin=stdin,
                          workdir=self._workdir, other_files=files)

@@ -128,6 +128,7 @@ RUN apt-get -y update && apt-get -y install \
                     software-properties-common \
                    && add-apt-repository ppa:deadsnakes/ppa \
                    && apt-get -y install \ # list packages here. These packages are examples
+                        strace \
                         g++ \
                         freeglut3-dev \
                         libglu1-mesa-dev \
