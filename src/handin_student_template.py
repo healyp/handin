@@ -248,6 +248,9 @@ class HandinMainWindow(QMainWindow, Ui_MainWindow):
                         if result == "Success":
                             print("Vars file has been created ...")
                             initVars = True
+                        elif result == "Reinit":
+                            print("Vars file exists but will be re-initialised to apply your extended attempts")
+                            initVars = True
                         elif result == "Failed":
                             print("Vars file already exists")
                             initVars = False
@@ -267,6 +270,11 @@ class HandinMainWindow(QMainWindow, Ui_MainWindow):
             init_vars_file(MODULE_CODE, STUDENT_ID, assignment_name, s)
         # get attempts left
         attempts_left: int = check_attempts_left(MODULE_CODE, STUDENT_ID, assignment_name, s)
+
+        if attempts_left == 0:
+            self.output("You have no more attempts!", flag="ERROR")
+            return
+
         late_penalty_msg = check_late_penalty(MODULE_CODE, assignment_name, s)
         penalty: int = -1
         if isinstance(late_penalty_msg, str):
@@ -377,8 +385,9 @@ def check_attempts_left(module_code, student_id, assignment_name, s: socket.sock
         send_message(assignment_name, s)
         attempts_left = recv_message(s)
         if attempts_left != "False":
-            if 1 <= int(attempts_left) <= 10:
-                return int(attempts_left)
+            attempts = int(attempts_left)
+            if attempts > 0:
+                return attempts
             else:
                 print("you have no attempts left")
                 print(attempts_left)
@@ -394,6 +403,7 @@ def check_late_penalty(module_code, assignment_name, s):
     if recv_message(s) == "OK":
         send_message(module_code, s)
         send_message(assignment_name, s)
+        send_message(STUDENT_ID, s)
         late_penalty = recv_message(s)
         try:
             late_penalty = int(late_penalty)

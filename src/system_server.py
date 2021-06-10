@@ -57,7 +57,12 @@ def process_delta(date1, date2):
 """
 def calculate_penalty(penaltyPerDay, end_day, now):
     factor = process_delta(end_day, now)
-    return penaltyPerDay * factor
+    penalty = penaltyPerDay * factor
+
+    if penalty < 0:
+        penalty = 0
+
+    return penalty
 
 def getPenaltyPerDay(module_code, assignment_name, end_day, now):
     """get penalty per day for a module"""
@@ -185,6 +190,25 @@ def authentication_of_student(name, sock):
     send_message("False", sock)
     RetrCommand(name, sock)
 
+def _checkAttemptsLeft(module_code, assignment_name, student_id):
+    exceptions = getStudentExceptions(module_code, assignment_name, student_id)
+
+    if exceptions is None:
+        # read vars.yaml file to get attemptsLeft value
+        vars_filepath = const.get_vars_file_path(module_code, assignment_name, student_id)
+        with open(vars_filepath, 'r') as stream:
+            data: dict = yaml.safe_load(stream)
+        if data.get("attemptsLeft"):
+            return str(data.get("attemptsLeft"))
+        else:
+            print("ERROR: attemptsLeft doesn't exist!!!")
+            return "False"
+    else:
+        if 'totalAttempts' in exceptions:
+            return str(exceptions['totalAttempts'])
+        else:
+            print("ERROR: attemptsLeft doesn't exist!!!")
+            return "False"
 
 def checkAttemptsLeft(name, sock):
     """check number of attempts left"""
@@ -192,17 +216,10 @@ def checkAttemptsLeft(name, sock):
     module_code = recv_message(sock)
     student_id = recv_message(sock)
     assignment_name = recv_message(sock)
-    # read vars.yaml file to get attemptsLeft value
-    vars_filepath = const.get_vars_file_path(module_code, assignment_name, student_id)
-    with open(vars_filepath, 'r') as stream:
-        data: dict = yaml.safe_load(stream)
-    if data.get("attemptsLeft"):
-        send_message(str(data.get("attemptsLeft")), sock)
-    else:
-        send_message("False", sock)
-        print("ERROR: attemptsLeft doesn't exist!!!")
-    RetrCommand(name, sock)
 
+    send_message(_checkAttemptsLeft(module_code, assignment_name, student_id), sock)
+
+    RetrCommand(name, sock)
 
 def checkIfModuleExists(name, sock):
     """check if the moduleCode exists"""
@@ -262,11 +279,28 @@ def createVarsFile(name, sock):
         with open(vars_filepath, 'w'):
             pass
         send_message("Success", sock)
-        RetrCommand(name, sock)
-        return
-    send_message("Failed", sock)
+    elif os.path.isfile(vars_directory + "/reinit.attempts"):
+        send_message("Reinit", sock)
+    else:
+        send_message("Failed", sock)
     RetrCommand(name, sock)
 
+def re_initialise_attempts(vars_filepath, module_code, assignment_name, student_id):
+    with open(vars_filepath, 'r') as file:
+        data = yaml.safe_load(file)
+
+    exceptions = getStudentExceptions(module_code, assignment_name, student_id)
+
+    if exceptions is None or 'totalAttempts' not in exceptions:
+        print("WARNING: totalAttempts not in exceptions but attempts were indicated to be reinitialised, falling back to params total attempts")
+        attempts = get_total_attempts(module_code, assignment_name)
+    else:
+        attempts = exceptions['totalAttempts']
+
+    data['attemptsLeft'] = attempts
+
+    with open(vars_filepath, 'w') as file:
+        yaml.dump(data, file)
 
 def initVarsFile(name, sock):
     """init vars.yaml file"""
@@ -276,30 +310,77 @@ def initVarsFile(name, sock):
     assignment_name = recv_message(sock)
     vars_filepath = const.get_vars_file_path(module_code, assignment_name, student_id)
     params_filepath = const.get_params_file_path(module_code, assignment_name)
-    with open(params_filepath, 'r') as stream:
-        params: dict = yaml.safe_load(stream)
+    vars_directory = os.path.dirname(vars_filepath)
 
-    data = {
-        "attemptsLeft": get_total_attempts(module_code, assignment_name),
-        "marks": 0,
-    }
+    if os.path.isfile(vars_directory + "/reinit.attempts"):
+        print("Re-initialising attempts to excepted attempts")
+        os.remove(vars_directory + "/reinit.attempts")
+        re_initialise_attempts(vars_filepath, module_code, assignment_name, student_id)
+    else:
+        with open(params_filepath, 'r') as stream:
+            params: dict = yaml.safe_load(stream)
 
-    if 'attendance' in params:
-        data['attendance'] = 0
+        data = {
+            "attemptsLeft": get_total_attempts(module_code, assignment_name),
+            "marks": 0,
+        }
 
-    if 'compilation' in params:
-        data['compilation'] = 0
+        if 'attendance' in params:
+            data['attendance'] = 0
 
-    with open(vars_filepath, 'w') as f:
-        yaml.dump(data, f, default_flow_style=False)
+        if 'compilation' in params:
+            data['compilation'] = 0
+
+        with open(vars_filepath, 'w') as f:
+            yaml.dump(data, f, default_flow_style=False)
+
     RetrCommand(name, sock)
 
+def getStudentExceptions(module, assignment, student_id):
+    exceptions_path = os.path.join(const.ROOTDIR, module, "curr", "assignments", assignment, "exceptions.yaml")
+    if os.path.isfile(exceptions_path):
+        with open(exceptions_path, 'r') as file:
+            data = yaml.safe_load(file)
+
+        if student_id in data:
+            return data[student_id]
+
+    return None
+
+def getExceptionsPenalty(exceptions, now):
+    """get penalty per day for a module"""
+    if "penaltyPerDay" in exceptions and 'endDay' in exceptions:
+        end_day = datetime.strptime(exceptions['endDay'], "%Y-%m-%d %H:%M")
+        penalty = calculate_penalty(exceptions['penaltyPerDay'], end_day, now)
+
+        return str(penalty)
+    elif 'endDay' not in exceptions:
+        print("ERROR: endDay doesn't exist!!!")
+        return "False"
+    else:
+        print("ERROR: penaltyPerDay doesn't exist!!!")
+        return "False"
+
+def _late_cutoff(now, end_day, module_code, assignment_name, student_exceptions, sock):
+    miss_cutoff = True
+    if student_exceptions is not None:
+        if 'cutoffDay' in student_exceptions:
+            cutoff_day = datetime.strptime(student_exceptions['cutoffDay'], "%Y-%m-%d %H:%M")
+            miss_cutoff = now > cutoff_day
+
+    if miss_cutoff:
+        send_message("You have missed the cutoff day, you are not allowed to submit now!", sock)
+    else:
+        penalty_per_day = getExceptionsPenalty(student_exceptions, now)
+
+        send_message(str(penalty_per_day), sock)
 
 def checkLatePenalty(name, sock):
     """Get late penalty"""
     send_message("OK", sock)
     module_code = recv_message(sock)
     assignment_name = recv_message(sock)
+    student_id = recv_message(sock)
 
     dates = getDates(module_code, assignment_name)
 
@@ -311,20 +392,25 @@ def checkLatePenalty(name, sock):
         cutoff_day = dates[2]
         now: datetime = datetime.now()
 
+        student_exceptions = getStudentExceptions(module_code, assignment_name, student_id)
+
         if end_day <= start_day or cutoff_day < end_day:
             send_message("Invalid dates defined for this assignment: Start day < end day and end day must be <= cutoff day. Contact the lecturer", sock)
         else:
             if now < start_day:
                 send_message("Submission too early!", sock)
             elif now > cutoff_day:
-                send_message("You have missed the cutoff day, you are not allowed to submit now!", sock)
+                _late_cutoff(now, end_day, module_code, assignment_name, student_exceptions, sock)
             elif start_day < now < end_day:
                 # no late penalty applied
                 send_message("0", sock)
             elif end_day < now < cutoff_day:
-                penalty_per_day: str = getPenaltyPerDay(module_code, assignment_name, end_day, now)
-                if penalty_per_day == "False":
-                    send_message("ERROR: penaltyPerDay doesn't exist!!!", sock)
+                if student_exceptions is None:
+                    penalty_per_day: str = getPenaltyPerDay(module_code, assignment_name, end_day, now)
+                    if penalty_per_day == "False":
+                        send_message("ERROR: penaltyPerDay doesn't exist!!!", sock)
+                else:
+                    penalty_per_day = getExceptionsPenalty(student_exceptions, now)
 
                 send_message(str(penalty_per_day), sock)
     RetrCommand(name, sock)
@@ -412,6 +498,56 @@ def delete_all_output_files(data_path):
     for f in files:
         os.remove(data_path + "/" + f)
 
+def decrement_attempts(module_code, assignment_name, student_id, vars_data, vars_filepath):
+    exceptions = getStudentExceptions(module_code, assignment_name, student_id)
+    result_msg = ""
+
+    write_path = os.path.join(const.ROOTDIR, module_code, "curr", "assignments", assignment_name, "exceptions.yaml")
+    student_exceptions = None
+    if os.path.isfile(write_path):
+        with open(write_path, 'r') as file:
+            exceptions = yaml.safe_load(file)
+
+            if student_id in exceptions:
+                student_exceptions = exceptions[student_id]
+
+    if student_exceptions is None:
+        if "attemptsLeft" in vars_data and vars_data["attemptsLeft"]:
+            attemptsLeft = vars_data["attemptsLeft"]
+            vars_data["attemptsLeft"] = attemptsLeft - 1
+            attemptsLeft -= 1
+            if attemptsLeft <= 0:
+                vars_data["attemptsLeft"] = 0
+
+            result_msg += "</br>You have %s attempts left</br> " % str(attemptsLeft)
+        else:
+            vars_data["attemptsLeft"] = 0
+            result_msg += "</br>You have 0 attempts left</br> "
+
+        with open(vars_filepath, 'w') as f:
+            yaml.dump(vars_data, f)
+
+    else:
+        if 'totalAttempts' in student_exceptions:
+            attemptsLeft = student_exceptions['totalAttempts']
+            attemptsLeft -= 1
+
+            if attemptsLeft <= 0:
+                attemptsLeft = 0
+
+            student_exceptions['totalAttempts'] = attemptsLeft
+            result_msg += "</br>You have %s attempts left</br> " % str(attemptsLeft)
+        else:
+            student_exceptions['totalAttempts'] = 0
+            result_msg += "</br>You have 0 attempts left</br> "
+
+        exceptions[student_id] = student_exceptions
+        with open(write_path, 'w') as file:
+            yaml.dump(exceptions, file)
+
+    return result_msg
+
+
 def getExecResult(name, sock):
     """Exec the program and get exec result"""
     send_message("OK", sock)
@@ -433,8 +569,10 @@ def getExecResult(name, sock):
     with open(vars_filepath, 'r') as stream:
         vars_data: dict = yaml.safe_load(stream)
 
+    attempts_left = _checkAttemptsLeft(module_code, assignment_name, student_id)
+
     # check if attempts left
-    if "attemptsLeft" in vars_data and vars_data["attemptsLeft"] > 0:
+    if attempts_left != "False" and int(attempts_left) > 0:
         if "tests" in data and data["tests"]:
             tests = data["tests"]
             # if attendance exists, check attendance, assign marks

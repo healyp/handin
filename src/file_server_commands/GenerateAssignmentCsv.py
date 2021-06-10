@@ -1,7 +1,7 @@
 import csv
 import datetime
 import os
-import re
+import shutil
 
 import yaml
 
@@ -44,11 +44,14 @@ class GenerateAssignmentCsv(AbstractCommand):
 
             rows.append(values)
 
-
-    def generate_assignment_csv(self, module, timestamp, assignment_path, data_path, students: list, reports_path):
+    def generate_assignment_csv(self, module, assignment_path, data_path, students: list, reports_path):
         assignment = os.path.basename(assignment_path)
         params_file_path = const.get_params_file_path(module, assignment)
-        report_file_path = os.path.join(reports_path, f"{assignment}-grades-{timestamp}.csv")
+        report_file_path = os.path.join(reports_path, f"{assignment}-grades.csv")
+
+        if os.path.isfile(report_file_path):
+            shutil.move(report_file_path, report_file_path + ".old")
+
         with open(params_file_path, 'r') as file:
             params: dict = yaml.safe_load(file)
 
@@ -82,7 +85,6 @@ class GenerateAssignmentCsv(AbstractCommand):
         module_path = os.path.join(const.ROOTDIR, module, "curr")
         assignments_path = os.path.join(module_path, "assignments")
         data_path = os.path.join(module_path, "data")
-        timestamp = datetime.datetime.now().isoformat()
         reports_path = os.path.join(module_path, "reports")
 
         if not os.path.isdir(reports_path):
@@ -95,7 +97,7 @@ class GenerateAssignmentCsv(AbstractCommand):
                 assignments = [assignment]
 
             for assignment in assignments:
-                self.generate_assignment_csv(module, timestamp, os.path.join(assignments_path, assignment),
+                self.generate_assignment_csv(module, os.path.join(assignments_path, assignment),
                                              data_path, os.listdir(data_path), reports_path)
 
     def handleRequest(self, request: Request):

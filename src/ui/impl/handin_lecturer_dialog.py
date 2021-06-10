@@ -46,6 +46,6 @@ class Ui_Dialog(object):
         Dialog.setWindowTitle(_translate("Dialog", "Handin System (Lecturer)"))
         self.pushButton.setText(_translate("Dialog", "Manage Student Marks"))
         self.pushButton_2.setText(_translate("Dialog", "Create Assignment"))
-        self.pushButton_3.setText(_translate("Dialog", "Create Exceptions"))
+        self.pushButton_3.setText(_translate("Dialog", "Add Exceptions"))
         self.pushButton_4.setText(_translate("Dialog", "Create Definitions"))
         self.pushButton_5.setText(_translate("Dialog", "View Assignment"))

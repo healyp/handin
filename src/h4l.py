@@ -19,6 +19,7 @@ from ui.impl.view_assignment_dialog import Ui_Dialog as Ui_Dialog_View_Assignmen
 from ui.impl.handin_lecturer_login import Ui_MainWindow as Ui_MainWindow_Lecturer_Login
 from ui.impl.handin_lecturer_dialog import Ui_Dialog as Ui_Main_Lecturer_Dialog
 from ui.impl.pick_module_dialog import Ui_Dialog as Ui_Dialog_pick_module
+from ui.impl.add_exceptions_dialog import Ui_Dialog as Ui_Dialog_add_exceptions
 
 # from dateutil.parser import parse
 from datetime import date
@@ -130,7 +131,9 @@ class PickModuleDialog(QDialog, Ui_Dialog_pick_module):
         module = self.comboBox_modules.currentText()
         if module != "":
             dialog = MainLecturerDialog()
-            dialog.exec()
+            #dialog.exec()
+            #dialog.setModal(True)
+            dialog.show()
 
 class MainLecturerDialog(QDialog, Ui_Main_Lecturer_Dialog):
     def __init__(self, parent=None):
@@ -138,6 +141,7 @@ class MainLecturerDialog(QDialog, Ui_Main_Lecturer_Dialog):
         self.setupUi(self)
         self.pushButton.clicked.connect(lambda: self.manage_student_marks())
         self.pushButton_2.clicked.connect(lambda: self.createOneOffAssignment())
+        self.pushButton_3.clicked.connect(lambda: self.add_exceptions())
         self.pushButton_4.clicked.connect(lambda: self.create_definitions())
         self.pushButton_5.clicked.connect(lambda: self.clone_assignment())
         self.buttonBox.button(QtWidgets.QDialogButtonBox.Cancel).clicked.connect(self.close)
@@ -160,6 +164,10 @@ class MainLecturerDialog(QDialog, Ui_Main_Lecturer_Dialog):
 
     def createOneOffAssignment(self):
         dialog = CreateAssignmentDialog(self)
+        dialog.show()
+
+    def add_exceptions(self):
+        dialog = AddExceptionsDialog(self)
         dialog.show()
 
     def create_definitions(self):
@@ -333,6 +341,11 @@ def map_tests_path(params_path, test_name, path, file):
     server_directory_relative = server_directory[server_directory.index("/.handin") + len("/.handin"):]
     server_file_name = f"{test_name}-{file}{extension}"
     return server_directory_relative, server_file_name
+
+def confirm_close(parent):
+    ret = QMessageBox.question(parent,'', "Are you sure you want to cancel? You will lose all changes", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+
+    return ret == QMessageBox.Yes
 
 class CreateAssignmentDialog(QDialog, Ui_Dialog_CreateAssignment):
     def __init__(self, parent=None, existing_assignment: dict = None, assignment_path: str = None):
@@ -814,13 +827,160 @@ class CreateAssignmentDialog(QDialog, Ui_Dialog_CreateAssignment):
                     create_message_box("Assignment updated successfully")
                 self.close()
 
-    def confirm_close(self):
-        ret = QMessageBox.question(self,'', "Are you sure you want to cancel? You will lose all changes", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+    def cancelClicked(self):
+        if confirm_close(self):
+            self.close()
+
+class AddExceptionsDialog(QDialog, Ui_Dialog_add_exceptions):
+    def __init__(self, parent=None):
+        super(AddExceptionsDialog, self).__init__(parent)
+        self.setupUi(self)
+        self.pushButton_submit.setDisabled(True)
+        assignments, error = getModuleAssignments(module)
+
+        if not error:
+            self.assignment_comboBox.addItems([""] + assignments)
+            self.assignment_comboBox.currentTextChanged.connect(self.disable_submit_button)
+            self.assignment_comboBox.currentTextChanged.connect(self.load_params)
+            self.lineEdit_studentId.textChanged.connect(self.disable_submit_button)
+            self.params = {}
+            self.loaded_exceptions = {}
+            self.checkBox_retrieveExisting.stateChanged.connect(self.load_existing)
+            self.pushButton_submit.clicked.connect(self.submit)
+            self.pushButton_cancel.clicked.connect(self.cancel)
+            self.checkBox_delete.stateChanged.connect(self.delete)
+            self.disable_submit_button()
+
+    def disable_submit_button(self):
+        if self.assignment_comboBox.currentText().strip() == "" or self.lineEdit_studentId.text().strip() == "":
+            self.pushButton_submit.setDisabled(True)
+            self.checkBox_retrieveExisting.setDisabled(True)
+            self.checkBox_delete.setDisabled(True)
+        else:
+            self.pushButton_submit.setDisabled(False)
+            self.checkBox_retrieveExisting.setDisabled(False)
+            self.checkBox_delete.setDisabled(False)
+
+    def load_existing(self):
+        if self.checkBox_retrieveExisting.isChecked():
+            assignment = self.assignment_comboBox.currentText().strip()
+            student_id = self.lineEdit_studentId.text().strip()
+
+            if assignment != "" and student_id != "":
+                if assignment not in self.loaded_exceptions:
+                    exceptions, error = getExceptionsFile(module, assignment)
+
+                    if not error:
+                        self.loaded_exceptions[assignment] = exceptions # cache them
+                    else:
+                        return
+
+                exceptions = self.loaded_exceptions[assignment]
+
+                if student_id in exceptions:
+                    student_exceptions = exceptions[student_id]
+                    if 'endDay' in student_exceptions:
+                        self.dateTime_dueDate.setDateTime(QDateTime.fromString(student_exceptions['endDay'], "yyyy-MM-dd HH:mm"))
+                    if 'cutoffDay' in student_exceptions:
+                        self.dateTime_cutoffDate.setDateTime(
+                            QDateTime.fromString(student_exceptions['cutoffDay'], "yyyy-MM-dd HH:mm"))
+                    if 'penaltyPerDay' in student_exceptions:
+                        self.spinBox_penalty.setValue(student_exceptions['penaltyPerDay'])
+                    if 'totalAttempts' in student_exceptions:
+                        self.spinBox_attempts.setValue(student_exceptions['totalAttempts'])
+                else:
+                    create_message_box("There are no existing exceptions for the provided student")
+
+    def load_params(self):
+        assignment = self.assignment_comboBox.currentText().strip()
+
+        if assignment != "":
+            content, filename, error = getParams(module, assignment)
+            if not error:
+                self.params = yaml.safe_load(content)
+                if 'endDay' in self.params:
+                    self.dateTime_dueDate.setDateTime(QDateTime.fromString(self.params['endDay'], "yyyy-MM-dd HH:mm"))
+                if 'cutoffDay' in self.params:
+                    self.dateTime_cutoffDate.setDateTime(QDateTime.fromString(self.params['cutoffDay'], "yyyy-MM-dd HH:mm"))
+                if 'penaltyPerDay' in self.params:
+                    self.spinBox_penalty.setValue(self.params['penaltyPerDay'])
+                if 'totalAttempts' in self.params:
+                    self.spinBox_attempts.setValue(self.params['totalAttempts'])
+
+    def _validate_dates(self, dueDate, cutoffDate):
+        format_string = "%Y-%m-%d %H:%M"
+        params_due_date = None
+        params_cutoff = None
+
+        if 'endDay' in self.params:
+            params_due_date = self.params['endDay']
+
+        if 'cutoffDay' in self.params:
+            params_cutoff = self.params['cutoffDay']
+
+        if params_due_date is not None:
+            params_due_date = datetime.datetime.strptime(params_due_date, format_string)
+            dueDate = datetime.datetime.strptime(dueDate, format_string)
+
+            if params_due_date > dueDate:
+                create_message_box("The due date for an exception must be on or after the assignment's due date")
+                return False
+
+        if params_cutoff is not None:
+            cutoffDate = datetime.datetime.strptime(cutoffDate, format_string)
+            if not isinstance(dueDate, datetime.datetime):
+                dueDate = datetime.datetime.strptime(dueDate, format_string)
+
+            if cutoffDate < dueDate:
+                create_message_box("The cutoff date must be on or after the specified due date")
+                return False
+
+        return True
+
+    def confirm_deletion(self, student_id):
+        ret = QMessageBox.question(self,'', f"Are you sure to delete the exceptions for {student_id}?", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
         return ret == QMessageBox.Yes
 
-    def cancelClicked(self):
-        if self.confirm_close():
+    def delete(self):
+        if self.checkBox_delete.isChecked():
+            assignment = self.assignment_comboBox.currentText().strip()
+            student_id = self.lineEdit_studentId.text().strip()
+
+            if assignment != "" and student_id != "":
+                if self.confirm_deletion(student_id) and not deleteException(module, assignment, student_id):
+                    create_message_box(f"Exceptions for student {student_id} removed successfully")
+                    self.close()
+
+
+    def submit(self):
+        assignment = self.assignment_comboBox.currentText().strip()
+        student_id = self.lineEdit_studentId.text().strip()
+
+        if assignment != "" and student_id != "":
+            endDay = self.dateTime_dueDate.text()
+            cutoffDay = self.dateTime_cutoffDate.text()
+            penaltyPerDay = int(self.spinBox_penalty.text())
+            totalAttempts = int(self.spinBox_attempts.text())
+
+            if not self._validate_dates(endDay, cutoffDay):
+                return
+            else:
+                exceptions = {
+                    'endDay': endDay,
+                    'cutoffDay': cutoffDay,
+                    'penaltyPerDay': penaltyPerDay,
+                    'totalAttempts': totalAttempts
+                }
+
+                if not updateExceptionsFile(module, assignment, student_id, exceptions):
+                    # no error occurred
+                    create_message_box(f"Exceptions for student {student_id} on assignment {assignment} submitted successfully")
+
+                    self.close()
+
+    def cancel(self):
+        if confirm_close(self):
             self.close()
 
 class CreateDefinitionsDialog(QDialog, Ui_Dialog_Create_Definitions):

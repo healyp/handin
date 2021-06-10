@@ -891,3 +891,117 @@ def generateAssignmentCSV(module, assignment = 'all') -> bool:
         error = True
 
     return error
+
+def updateExceptionsFile(module, assignment, student_id, exceptions):
+    global s
+    try:
+        if setSocket():
+            args = {
+                'module': module,
+                'assignment': assignment,
+                'student_id': student_id,
+                'exceptions': exceptions
+            }
+            addLecturerAuthDetails(args)
+
+            response = request(Request(s, FileServerCommands.UPDATE_EXCEPTIONS_FILE, args))
+
+            if response is not None:
+                if not response.disconnected:
+                    if response.success == "True":
+                        return False
+                    else:
+                        error = True
+                        doError(f"{response.message}")
+                else:
+                    s = None
+                    error = True
+                    if response.error:
+                        logging.error(f"Response Error: {response.error_message}")
+            else:
+                s = None
+                error = True
+                logging.error(f"Request Error")
+        else:
+            error = True
+    except MessagingError as m:
+        s = None
+        doError(f"{m}")
+        error = True
+
+    return error
+
+def getExceptionsFile(module, assignment):
+    global s
+    try:
+        if setSocket():
+            args = {
+                'module': module,
+                'assignment': assignment
+            }
+            addLecturerAuthDetails(args)
+
+            response = request(Request(s, FileServerCommands.GET_EXCEPTIONS_FILE, args))
+
+            if response is not None:
+                if not response.disconnected:
+                    if response.success == "True":
+                        return response.data['exceptions'], False
+                    else:
+                        error = True
+                        doError(f"{response.message}")
+                else:
+                    s = None
+                    error = True
+                    if response.error:
+                        logging.error(f"Response Error: {response.error_message}")
+            else:
+                s = None
+                error = True
+                logging.error(f"Request Error")
+        else:
+            error = True
+    except MessagingError as m:
+        s = None
+        doError(f"{m}")
+        error = True
+
+    return {}, error
+
+def deleteException(module, assignment, student_id):
+    global s
+    try:
+        if setSocket():
+            args = {
+                'module': module,
+                'assignment': assignment,
+                'student_id': student_id
+            }
+            addLecturerAuthDetails(args)
+
+            response = request(Request(s, FileServerCommands.DELETE_EXCEPTION, args))
+
+            if response is not None:
+                if not response.disconnected:
+                    if response.success == "True":
+                        return False
+                    else:
+                        error = True
+                        doError(f"{response.message}")
+                else:
+                    s = None
+                    error = True
+                    if response.error:
+                        logging.error(f"Response Error: {response.error_message}")
+            else:
+                s = None
+                error = True
+                logging.error(f"Request Error")
+        else:
+            error = True
+    except MessagingError as m:
+        s = None
+        doError(f"{m}")
+        error = True
+
+    return error

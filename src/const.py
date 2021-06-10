@@ -60,10 +60,13 @@ class FileServerCommands:
     DELETE_ASSIGNMENT = "delete_assignment"
     UPLOAD_FILE = "upload_file" # The path to the file should be a relative path as the server will prepend ROOTDIR to it
     GENERATE_ASSIGNMENT_CSV = "generate_assignment_csv"
+    UPDATE_EXCEPTIONS_FILE = "update_exceptions_file"
+    GET_EXCEPTIONS_FILE = "get_exceptions_file"
+    DELETE_EXCEPTION = "delete_exception"
     VALID_COMMANDS = [AUTHENTICATE_LECTURER, ALERT_MAC_ADDRESS, TRUST_MAC_ADDRESS, GET_LECTURER_MODULES, MODULE_INFO
                      , GET_VARS, CHECK_EXISTS, CREATE_ASSIGNMENT_DIRECTORY, UPDATE_PARAMS_FILE, CREATE_DEFINITIONS_FILE
                      , UPDATE_DEFINITIONS_FILE, GET_DEFINITIONS_FILE, GET_PARAMS, CLONE_ASSIGNMENT, DELETE_ASSIGNMENT
-                     , UPLOAD_FILE, GENERATE_ASSIGNMENT_CSV]
+                     , UPLOAD_FILE, GENERATE_ASSIGNMENT_CSV, UPDATE_EXCEPTIONS_FILE, GET_EXCEPTIONS_FILE, DELETE_EXCEPTION]
 
     @staticmethod
     def validateCommand(command):
