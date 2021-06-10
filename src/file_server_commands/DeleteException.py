@@ -44,6 +44,10 @@ class DeleteException(AbstractCommand):
 
         if student_id in current_exceptions:
             current_exceptions.pop(student_id)
+            submission_path = os.path.join(const.ROOTDIR, module, "curr", "data", student_id, assignment, "reinit.attempts")
+            if os.path.isfile(submission_path):
+                os.remove(submission_path)
+
             self.write_exceptions(exceptions_path, current_exceptions)
             return True
         else:

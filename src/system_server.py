@@ -26,12 +26,18 @@ def get_file_content(path, mode='r'):
         content = f.read()
     return content
 
-def get_total_attempts(module_code, assignment_name) -> int:
-    """read /**weekNum**/params.yaml file to get totalAttempts value"""
-    path = const.get_params_file_path(module_code, assignment_name)
-    with open(path, 'r') as stream:
-        data: dict = yaml.safe_load(stream)
-    return data.get("totalAttempts")
+def get_total_attempts(module_code, assignment_name, student_id) -> int:
+    exceptions = getStudentExceptions(module_code, assignment_name, student_id)
+
+    if exceptions is None or 'totalAttempts' not in exceptions:
+        """read /**weekNum**/params.yaml file to get totalAttempts value"""
+        path = const.get_params_file_path(module_code, assignment_name)
+        with open(path, 'r') as stream:
+            data: dict = yaml.safe_load(stream)
+        return data.get("totalAttempts")
+    else:
+        return exceptions['totalAttempts']
+
 
 """
     Calculate the factor to multiply the penalty percentage by based on the
@@ -293,7 +299,7 @@ def re_initialise_attempts(vars_filepath, module_code, assignment_name, student_
 
     if exceptions is None or 'totalAttempts' not in exceptions:
         print("WARNING: totalAttempts not in exceptions but attempts were indicated to be reinitialised, falling back to params total attempts")
-        attempts = get_total_attempts(module_code, assignment_name)
+        attempts = get_total_attempts(module_code, assignment_name, student_id)
     else:
         attempts = exceptions['totalAttempts']
 
@@ -321,7 +327,7 @@ def initVarsFile(name, sock):
             params: dict = yaml.safe_load(stream)
 
         data = {
-            "attemptsLeft": get_total_attempts(module_code, assignment_name),
+            "attemptsLeft": get_total_attempts(module_code, assignment_name, student_id),
             "marks": 0,
         }
 
@@ -361,7 +367,7 @@ def getExceptionsPenalty(exceptions, now):
         print("ERROR: penaltyPerDay doesn't exist!!!")
         return "False"
 
-def _late_cutoff(now, end_day, module_code, assignment_name, student_exceptions, sock):
+def _late_cutoff(now, student_exceptions, sock):
     miss_cutoff = True
     if student_exceptions is not None:
         if 'cutoffDay' in student_exceptions:
@@ -400,7 +406,7 @@ def checkLatePenalty(name, sock):
             if now < start_day:
                 send_message("Submission too early!", sock)
             elif now > cutoff_day:
-                _late_cutoff(now, end_day, module_code, assignment_name, student_exceptions, sock)
+                _late_cutoff(now, student_exceptions, sock)
             elif start_day < now < end_day:
                 # no late penalty applied
                 send_message("0", sock)
@@ -497,56 +503,6 @@ def delete_all_output_files(data_path):
 
     for f in files:
         os.remove(data_path + "/" + f)
-
-def decrement_attempts(module_code, assignment_name, student_id, vars_data, vars_filepath):
-    exceptions = getStudentExceptions(module_code, assignment_name, student_id)
-    result_msg = ""
-
-    write_path = os.path.join(const.ROOTDIR, module_code, "curr", "assignments", assignment_name, "exceptions.yaml")
-    student_exceptions = None
-    if os.path.isfile(write_path):
-        with open(write_path, 'r') as file:
-            exceptions = yaml.safe_load(file)
-
-            if student_id in exceptions:
-                student_exceptions = exceptions[student_id]
-
-    if student_exceptions is None:
-        if "attemptsLeft" in vars_data and vars_data["attemptsLeft"]:
-            attemptsLeft = vars_data["attemptsLeft"]
-            vars_data["attemptsLeft"] = attemptsLeft - 1
-            attemptsLeft -= 1
-            if attemptsLeft <= 0:
-                vars_data["attemptsLeft"] = 0
-
-            result_msg += "</br>You have %s attempts left</br> " % str(attemptsLeft)
-        else:
-            vars_data["attemptsLeft"] = 0
-            result_msg += "</br>You have 0 attempts left</br> "
-
-        with open(vars_filepath, 'w') as f:
-            yaml.dump(vars_data, f)
-
-    else:
-        if 'totalAttempts' in student_exceptions:
-            attemptsLeft = student_exceptions['totalAttempts']
-            attemptsLeft -= 1
-
-            if attemptsLeft <= 0:
-                attemptsLeft = 0
-
-            student_exceptions['totalAttempts'] = attemptsLeft
-            result_msg += "</br>You have %s attempts left</br> " % str(attemptsLeft)
-        else:
-            student_exceptions['totalAttempts'] = 0
-            result_msg += "</br>You have 0 attempts left</br> "
-
-        exceptions[student_id] = student_exceptions
-        with open(write_path, 'w') as file:
-            yaml.dump(exceptions, file)
-
-    return result_msg
-
 
 def getExecResult(name, sock):
     """Exec the program and get exec result"""
