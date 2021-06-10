@@ -62,18 +62,16 @@ class CreateNewModuleDialog(QDialog, Ui_Dialog_Create_New_Module):
         self.accepted.connect(lambda: self.create_module())
         self.buttonBox.setEnabled(False)
         self.lineEdit.textChanged.connect(self.disable_buttonbox)
-        self.lineEdit_name.textChanged.connect(self.disable_buttonbox)
 
     def disable_buttonbox(self):
         # len(self.lineEdit.text()) > 0 and \
-        goodcode = isMatchRegex(regex=ModCodeRE, text=self.lineEdit.text()) and self.lineEdit_name.text() != ""
+        goodcode = isMatchRegex(regex=ModCodeRE, text=self.lineEdit.text())
         self.buttonBox.setEnabled(goodcode)
 
 
     def create_module(self):
         module_code: str = self.lineEdit.text().strip()
         module_code = module_code.lower()
-        name: str = self.lineEdit_name.text().strip()
         ay: str = self.lineEdit_academicYear.text().strip()
         # start_semester: str = self.dateEdit_startSemester.text().strip()
         if check_if_module_exists(module_code):
@@ -85,21 +83,15 @@ class CreateNewModuleDialog(QDialog, Ui_Dialog_Create_New_Module):
         linkDir = os.path.join(ROOTDIR, module_code, "curr")
         os.symlink(ay, linkDir, True)
 
-        name_path = os.path.join(ROOTDIR, module_code, "name.txt")
-        with open(name_path, 'w+') as file:
-            file.write(name)
-
         create_message_box(f"Module {module_code} on academic year {ay} created successfully!")
 
     def create_files(self, module_dir):
-        """create tmpdir and definitions file"""
-        tmpdir = os.path.join(module_dir, "tmp")
-        if not os.path.exists(tmpdir):
-            os.makedirs(tmpdir) # hey presto!
+        if not os.path.isdir(module_dir):
+            os.makedirs(module_dir)
 
         class_list_path = os.path.join(module_dir, "class-list")
         if not os.path.exists(class_list_path):
-            with open(class_list_path, "w"):
+            with open(class_list_path, "w+"):
                 pass
 
 class CreateUserDialog(QDialog, Ui_Dialog_Create_User):

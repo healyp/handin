@@ -3,18 +3,19 @@ import socket
 import sys
 from datetime import datetime
 import struct
+import os
+import yaml
 
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import QFileInfo
 from PyQt5.QtWidgets import QMainWindow, QMessageBox
 
 # ****** DYNAMIC CONFIGS ****** #
-HOST = "{}"
-PORT = "{}"
-STUDENT_NAME = "{}"
-STUDENT_ID = "{}"
-MODULE_CODE = "{}"
-MODULE_NAME = "{}"
+HOST = "{hostname}"
+PORT = "{server_port}"
+STUDENT_NAME = "{student_name}"
+STUDENT_ID = "{student_id}"
+MODULE_CODE = ""
 # ****** DYNAMIC CONFIGS ****** #
 
 
@@ -29,15 +30,9 @@ class Ui_MainWindow(object):
         self.label = QtWidgets.QLabel(self.centralwidget)
         self.label.setGeometry(QtCore.QRect(20, 40, 100, 25))
         self.label.setObjectName("label")
-        self.label_2 = QtWidgets.QLabel(self.centralwidget)
-        self.label_2.setGeometry(QtCore.QRect(20, 80, 100, 25))
-        self.label_2.setObjectName("label_2")
         self.lineEdit_moduleCode = QtWidgets.QLineEdit(self.centralwidget)
         self.lineEdit_moduleCode.setGeometry(QtCore.QRect(140, 40, 120, 25))
         self.lineEdit_moduleCode.setObjectName("lineEdit_moduleCode")
-        self.lineEdit_moduleName = QtWidgets.QLineEdit(self.centralwidget)
-        self.lineEdit_moduleName.setGeometry(QtCore.QRect(140, 80, 220, 25))
-        self.lineEdit_moduleName.setObjectName("lineEdit_moduleName")
         self.label_3 = QtWidgets.QLabel(self.centralwidget)
         self.label_3.setGeometry(QtCore.QRect(400, 40, 100, 25))
         self.label_3.setObjectName("label_3")
@@ -99,7 +94,6 @@ class Ui_MainWindow(object):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "Handin System (Student)"))
         self.label.setText(_translate("MainWindow", "Module Code:"))
-        self.label_2.setText(_translate("MainWindow", "Module Name:"))
         self.label_3.setText(_translate("MainWindow", "Student ID:"))
         self.label_4.setText(_translate("MainWindow", "Student Name:"))
         self.label_5.setText(_translate("MainWindow", "File Name:"))
@@ -120,10 +114,6 @@ class HandinMainWindow(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         self.pushButton_browse.clicked.connect(self.browse)
         self.pushButton_handin.clicked.connect(self.check_handin)
-        self.lineEdit_moduleCode.setText(MODULE_CODE)
-        self.lineEdit_moduleCode.setEnabled(False)
-        self.lineEdit_moduleName.setText(MODULE_NAME)
-        self.lineEdit_moduleName.setEnabled(False)
         self.lineEdit_studentID.setText(STUDENT_ID)
         self.lineEdit_studentID.setEnabled(False)
         self.lineEdit_studentName.setText(STUDENT_NAME)
@@ -133,13 +123,65 @@ class HandinMainWindow(QMainWindow, Ui_MainWindow):
         self.lineEdit_chooseFile.setReadOnly(True)
         self.lineEdit_chooseFile.textChanged.connect(self.disable_handin)
         self.assignmentName.textChanged.connect(self.disable_handin)
+        self.lineEdit_moduleCode.textChanged.connect(self.disable_handin)
         self.pushButton_handin.setEnabled(False)
 
+        self.initialise_config_params()
+
+    def closeEvent(self, QCloseEvent):
+        home_path = os.path.expanduser("~") + "/.handin/configs.yaml"
+        module_code = self.lineEdit_moduleCode.text().strip()
+
+        if os.path.isfile(home_path) and module_code != "":
+            with open(home_path, 'r') as file:
+                data = yaml.safe_load(file)
+
+            data['last_module'] = module_code
+            with open(home_path, 'w') as file:
+                yaml.dump(data, file)
+
+        QCloseEvent.accept()
+
+    def initialise_config_params(self):
+        global HOST, PORT
+        home_path = os.path.expanduser("~") + "/.handin"
+        if not os.path.isdir(home_path):
+            os.makedirs(home_path)
+
+        config_file = home_path + "/configs.yaml"
+
+        if not os.path.isfile(config_file):
+            dictionary = {{
+                'host': str(HOST),
+                'port': int(PORT)
+            }} # need double braces to escape formatting in registration_server
+
+
+            with open(config_file, 'w+') as file:
+                yaml.dump(dictionary, file)
+        else:
+            with open(config_file, 'r') as file:
+                data: dict = yaml.safe_load(file)
+
+            if 'host' in data and 'port' in data:
+                HOST = data['host']
+                PORT = int(data['port'])
+
+            if 'last_module' in data:
+                self.lineEdit_moduleCode.setText(data['last_module'])
+
+        print("Using host: " + str(HOST) + " and port: " + str(PORT) + ". If these are incorrect, change them in " + config_file)
+
     def disable_handin(self):
-        if len(self.lineEdit_chooseFile.text()) > 0 and len(self.assignmentName.text().strip()) > 0:
+        global MODULE_CODE
+        module_code_temp = self.lineEdit_moduleCode.text().strip()
+        if len(self.lineEdit_chooseFile.text()) > 0 and len(self.assignmentName.text().strip()) > 0 \
+                and len(module_code_temp) > 0:
             self.pushButton_handin.setEnabled(True)
+            MODULE_CODE = module_code_temp
         else:
             self.pushButton_handin.setEnabled(False)
+            MODULE_CODE = ""
 
     def browse(self):
         filename, file_type = QtWidgets.QFileDialog.getOpenFileName(

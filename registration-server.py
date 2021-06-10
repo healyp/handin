@@ -143,68 +143,27 @@ class RequestHandler(BaseHTTPRequestHandler):
                 write_through=True,
             )
 
-            modCode = form['moduleCode'].value
             student_id = form['studentID'].value
             student_name = form['studentName'].value
 
-            logging.info(f"{self.client_address[0]} - ({modCode}, {student_id}, {student_name})")
+            logging.info(f"{self.client_address[0]} - ({student_id}, {student_name})")
 
-            modpath = os.path.join(const.ROOTDIR, modCode, "curr")
-            clpath = os.path.join(modpath, "class-list")
+            self.create_handin_file(student_id, student_name)
+            if not os.path.isdir(const.ROOTDIR + "/tmp"):
+                os.makedirs(const.ROOTDIR + "/tmp")
 
-            if not self.moduleExists(modCode):
-                emsg = "Nothing known about module {}; please contact your instructor.".format(modCode)
-                out.write(self.problemPage.format(msg=emsg))
-                logging.info(f"{self.client_address[0]} - ({modCode}, {student_id}, unknown module)")
-                out.detach()
-            elif not self.classListExists(modCode):
-                emsg = "No class list exists for module {}; please contact your instructor.".format(modCode)
-                out.write(self.problemPage.format(msg=emsg))
-                logging.info(f"{self.client_address[0]} - ({modCode}, {student_id}, no class list exists)")
-                out.detach()
-            elif const.findStudentId(student_id, clpath) == '':
-                emsg = "Student ID {} is not on {} class list; please contact your instructor.".format(student_id, modCode)
-                out.write(self.problemPage.format(msg=emsg))
-                logging.info(f"{self.client_address[0]} - ({modCode}, {student_id}, not on class list)")
-                out.detach()
-            else:
-                self.create_handin_file(modpath, modCode, student_id, student_name)
-                spath = f"/.handin/{modCode}/curr/tmp/handin_{student_id}.txt"
-                out.write(f'<h2>handin script download</h2><p>Click <a href="{spath}" download="handin.py">here</a> to download your personalised handin.py script')
+            spath = f"/.handin/tmp/handin_{student_id}.txt"
+            out.write(f'<h2>handin script download</h2><p>Click <a href="{spath}" download="handin.py">here</a> to download your personalised handin.py script')
 
-                out.detach()
-                logging.info(f"{self.client_address[0]} - ({modCode}, {student_id}, sending handin.py)")
+            out.detach()
+            logging.info(f"{self.client_address[0]} - ({student_id}, sending handin.py)")
 
         except Exception as e:
             self.handle_error(e)
 
-    def moduleExists(self, mc):
-        return os.path.exists(os.path.join(const.ROOTDIR, mc))
-
-    def currentSemesterExists(self, mc):
-        ay = const.whatAY()
-        return os.path.exists(os.path.join(const.ROOTDIR, mc, ay))
-
-    def classListExists(self, mc):
-        return os.path.exists(os.path.join(const.ROOTDIR, mc, "curr", "class-list"))
-
-    def getModuleName(self, module_code):
-        path = const.ROOTDIR + "/" + module_code + "/name.txt"
-
-        if not os.path.isfile(path):
-            return "Not Defined"
-        else:
-            with open(path, 'r') as f:
-                name = f.readline().strip()
-
-            if name is None or name == "":
-                name = "Not Defined"
-
-            return name
-
-    def create_handin_file(self, modpath, modcode, student_id, student_name):
+    def create_handin_file(self, student_id, student_name):
         # create /temp/ file directory if not exists
-        tmpdir = os.path.join(modpath, "tmp")
+        tmpdir = os.path.join(const.ROOTDIR, "tmp")
         if not os.path.isdir(tmpdir):
             logging.info("{} didn't exist after all; creating now...".format(tmpdir))
             os.mkdir(tmpdir)
@@ -215,12 +174,10 @@ class RequestHandler(BaseHTTPRequestHandler):
         with open(fpath, 'wb') as f:
             content_bytes: bytes = open(hstpath, 'rb').read()
             content = content_bytes.decode('utf-8').format(
-                        str(const.HOST),  # host
-                        str(const.PORT),  # port
-                        str(student_name),       # student name
-                        str(student_id),         # student id
-                        str(modcode),        # module code
-                        str(self.getModuleName(modcode))
+                        hostname=str(const.HOST),  # host
+                        server_port=str(const.PORT),  # port
+                        student_name=str(student_name),       # student name
+                        student_id=str(student_id)
                      )
 
             python_path = os.path.join(tmpdir, "handin_" + student_id + ".py")
