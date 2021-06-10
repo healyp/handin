@@ -178,7 +178,7 @@ class HandinMainWindow(QMainWindow, Ui_MainWindow):
         if len(self.lineEdit_chooseFile.text()) > 0 and len(self.assignmentName.text().strip()) > 0 \
                 and len(module_code_temp) > 0:
             self.pushButton_handin.setEnabled(True)
-            MODULE_CODE = module_code_temp
+            MODULE_CODE = module_code_temp.lower()
         else:
             self.pushButton_handin.setEnabled(False)
             MODULE_CODE = ""
