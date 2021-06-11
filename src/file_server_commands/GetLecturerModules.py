@@ -1,3 +1,6 @@
+import os.path
+
+import const
 from const import *
 from file_server_commands.AbstractCommand import AbstractCommand
 from handin_messaging import *
@@ -25,7 +28,8 @@ class GetLecturerModules(AbstractCommand):
                         if ln.startswith(lecturer):
                             data = ln.split()
                             for module in data[1:]:
-                                modules.append(module)
+                                if os.path.isdir(os.path.join(const.ROOTDIR, module)):
+                                    modules.append(module)
 
             response_data = {
                 'modules': modules

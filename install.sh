@@ -9,7 +9,7 @@
 
 function print_usage() {
   echo -e "./install -uninstall | [-u user] [--no-services | -start] [--docker]\n\t-u user\n\t\tAn optional flag to specify the user to start the handin servers.
-          \tThey must be in the docker group. If left blank, the output of the logname command is used\n\t--no-services\n\t\tSpecify this just to install the start_handin script
+          \tThey must be in the docker group. If left blank, the output of the logname command is used\n\n\t--no-services\n\t\tSpecify this just to install the start_handin script
           \n\t-start\n\t\tOptional flag to start the services after installation. This doesn't make sense with --no-services, so it's either --no-services or -start, not both
           \n\t-uninstall\n\t\tUninstalls handin service files and removes the start_handin script
           \n\t--docker\n\t\tOptional flag to build the docker images if install is specified or delete them if uninstall is specified\n\n
