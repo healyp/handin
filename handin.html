@@ -2,29 +2,36 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Handin System - UL</title>
+    <title>Handin System Registration</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-wEmeIV1mKuiNpC+IOBjI7aAzPcEZeedi5yW5f2yOq55WWLwNGmvvx4Um1vskeMj0" crossorigin="anonymous">
 </head>
 <body>
-    <div class="container">
-        <form onsubmit="return checkSubmit()" action="" method="post">
-            <div class="form-group">
-                <label for="moduleCode">Module Code: </label>
-                <input type="text" class="form-control" id="moduleCode" name="moduleCode" placeholder="Enter Module Code">
-                <span id="moduleMsg" style="color: red;"></span>
-            </div>
-            <div class="form-group">
-                <label for="studentID">Student ID: </label>
-                <input type="text" class="form-control" id="studentID" name="studentID" placeholder="Enter Student ID">
-                <span id="idMsg" style="color: red;"></span>
-            </div>
-            <div class="form-group">
-                <label for="studentName">Student Name: </label>
-                <input type="text" class="form-control" id="studentName" name="studentName" placeholder="Enter Student Name">
-                <span id="nameMsg" style="color: red;"></span>
-            </div>
-            <button type="submit" class="btn btn-primary" id="submitBtn" name="submitBtn">Submit</button>
-        </form>
+    <div class="container-fluid d-flex align-items-center justify-content-center vh-100" style="background-color: lightblue;">
+      <div class="mx-auto w-50">
+        <div class="row text-center">
+          <h4>Handin System Student Registration</h4>
+        </div>
+        <div class="card mx-auto">
+          <div class="m-3">
+            <form onsubmit="return checkSubmit()" action="" method="post">
+                <div class="form-group">
+                    <label for="studentID">Student ID: </label>
+                    <input type="text" class="form-control" id="studentID" name="studentID" placeholder="Enter Student ID">
+                    <span id="idMsg" style="color: red;"></span>
+                </div>
+                <div class="form-group">
+                    <label for="studentName">Student Name: </label>
+                    <input type="text" class="form-control" id="studentName" name="studentName" placeholder="Enter Student Name">
+                    <span id="nameMsg" style="color: red;"></span>
+                </div>
+                <div class="mt-2">
+                  <button type="submit" class="btn btn-primary w-100" id="submitBtn" name="submitBtn">Submit</button>
+                </div>
+            </form>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script type="text/javascript">
@@ -53,7 +60,7 @@
             $("#studentName").blur(function () {
                 let studentName = $(this).val()
                 if (studentName == null || studentName.length === 0)
-                    $("#nameMsg").html('Student Name cannot be null!')
+                    $("#nameMsg").html('Student Name cannot be empty!')
                 else
                     $("#nameMsg").html('')
                 $("#errorMsg").html('')

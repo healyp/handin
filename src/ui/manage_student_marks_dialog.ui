@@ -51,7 +51,7 @@
     </rect>
    </property>
   </widget>
-  <widget class="QComboBox" name="comboBox_week">
+  <widget class="QComboBox" name="comboBox_assignment">
    <property name="geometry">
     <rect>
      <x>270</x>

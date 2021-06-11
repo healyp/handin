@@ -19,7 +19,7 @@ class Ui_Dialog(object):
         Dialog.setMaximumSize(QtCore.QSize(500, 300))
         self.label_alert = QtWidgets.QLabel(Dialog)
         self.label_alert.setObjectName("label_alert")
-        self.label_alert.setGeometry(175, 20, 150, 30)
+        self.label_alert.setGeometry(175, 20, 160, 30)
         self.comboBox_modules = QtWidgets.QComboBox(Dialog)
         self.comboBox_modules.setObjectName("comboBox_modules")
         self.comboBox_modules.setGeometry(175, 100, 150, 30)
@@ -34,5 +34,3 @@ class Ui_Dialog(object):
         Dialog.setWindowTitle(_translate("Dialog", "Handin System (Lecturer)"))
         self.pushButton.setText(_translate("Dialog", "Next"))
         self.label_alert.setText(_translate("Dialog", "Pick a module to access."))
-
-

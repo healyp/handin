@@ -1,0 +1,13 @@
+registration_host: '127.0.0.1' # The host for the registration server
+registration_port: 8080 # The port for the registration server
+system_host: '127.0.0.1' # The host for the handin system
+system_port: 8000 # The port for the handin system
+file_server_host: '127.0.0.1' # The host for the handin file server
+file_server_port: 8500 # The port for the handin file server
+file_server_log_level: 20 # log level for the handin file server. see https://docs.python.org/3/library/logging.html for debug level numeric values 20 is INFO and 10 is DEBUG
+file_html_landing: handin_file_server.html # a html page to show if the handin file server is accessed from a browser, if not absolute, it is relative to HANDINHOME
+response_timeout: 3 # timeout in seconds to wait for a response from the server
+archive_num: 3 # number of submission archives to keep as well as the current submission (archive_num + 1 copies of submissions in total), set this to -1 for unlimited archives or 0 to disable it
+program_execution_timeout: 5 # the number of seconds for program execution timeout
+program_memory_limit: 64 # the memory limit of docker containers executing programs in megabytes (MB)
+program_syscall_monitoring : true # pass commands sent to handinexecutor.run into src/pmonitor/pmonitor.sh to log syscalls defined in src/pmonitor/syscalls.conf

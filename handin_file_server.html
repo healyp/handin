@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Handin File Server</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-wEmeIV1mKuiNpC+IOBjI7aAzPcEZeedi5yW5f2yOq55WWLwNGmvvx4Um1vskeMj0" crossorigin="anonymous">
+  </head>
+  <body>
+    <div class="container-fluid d-flex align-items-center justify-content-center vh-100" style="background-color: lightblue;">
+      <div class="card mx-auto w-50">
+        <h1>Welcome to Handin File Server!</h1>
+        <p>If you are seeing this, it is because you accessed the server through a browser and not a handin client</p>
+        <p>The server is used to provide handin clients with access to files in the .handin directory on the server
+          hosting it. It allows for authentication, resource retrieval and creation (such as modules, assignments etc.).
+          It provides a centralised location for all the data that clients can then access from different locations.
+        </p>
+        <br>
+        <p>It is not intended to be accessed by a browser with a HTTP request and as such, does not have any front-end to it, with the exception
+          of this information message of course!
+        </p>
+        <br>
+        <p>The following clients can be used to access this server:</p>
+        <ul class="list-group">
+          <li class="list-group-item">python3 src/h4l.py (This script needs lecturer <b>authentication</b>)</li>
+        </ul>
+        <p>These commands need to be run from handin directory (place you downloaded handin)</p>
+      </div>
+    </div>
+  </body>
+</html>

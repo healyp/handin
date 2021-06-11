@@ -1,3 +1,4 @@
 pyqt5~=5.14.1
 yaml~=0.1.7
 pyyaml~=5.1.2
+epicbox~=1.1.0

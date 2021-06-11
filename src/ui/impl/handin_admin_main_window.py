@@ -25,6 +25,9 @@ class Ui_MainWindow(object):
         self.pushButton_user = QtWidgets.QPushButton(self.centralwidget)
         self.pushButton_user.setGeometry(QtCore.QRect(140, 100, 200, 30))
         self.pushButton_user.setObjectName("pushButton_user")
+        self.pushButton_access_rights = QtWidgets.QPushButton(self.centralwidget)
+        self.pushButton_access_rights.setGeometry(QtCore.QRect(140, 160, 200, 30))
+        self.pushButton_access_rights.setObjectName("pushButton_access_rights")
         MainWindow.setCentralWidget(self.centralwidget)
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -34,4 +37,4 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(_translate("MainWindow", "Handin System (Administrator)"))
         self.pushButton.setText(_translate("MainWindow", "Create New Module"))
         self.pushButton_user.setText(_translate("MainWindow", "Create New User"))
-
+        self.pushButton_access_rights.setText(_translate("MainWindow", "Module Access Rights"))

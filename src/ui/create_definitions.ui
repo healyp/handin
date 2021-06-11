@@ -145,7 +145,7 @@
    <widget class="QTimeEdit" name="timeEdit">
     <property name="geometry">
      <rect>
-      <x>150</x>
+      <x>100</x>
       <y>90</y>
       <width>71</width>
       <height>26</height>
@@ -181,9 +181,9 @@
    <widget class="QLineEdit" name="lineEdit_2">
     <property name="geometry">
      <rect>
-      <x>150</x>
+      <x>100</x>
       <y>120</y>
-      <width>101</width>
+      <width>151</width>
       <height>25</height>
      </rect>
     </property>
@@ -194,9 +194,9 @@
    <widget class="QLineEdit" name="lineEdit_3">
     <property name="geometry">
      <rect>
-      <x>150</x>
-      <y>160</y>
-      <width>101</width>
+      <x>100</x>
+      <y>150</y>
+      <width>151</width>
       <height>25</height>
      </rect>
     </property>
@@ -208,7 +208,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>190</y>
+      <y>180</y>
       <width>91</width>
       <height>31</height>
      </rect>
@@ -220,9 +220,9 @@
    <widget class="QLineEdit" name="lineEdit_4">
     <property name="geometry">
      <rect>
-      <x>150</x>
-      <y>190</y>
-      <width>101</width>
+      <x>100</x>
+      <y>180</y>
+      <width>151</width>
       <height>25</height>
      </rect>
     </property>
