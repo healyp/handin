@@ -76,7 +76,7 @@ class Ui_Dialog(object):
         self.label_studentId.setText(_translate("Dialog", "Student ID:"))
         self.exceptions_groupBox.setTitle(_translate("Dialog", "Exceptions:"))
         self.dateTime_dueDate.setDisplayFormat(_translate("Dialog", "yyyy-MM-dd HH:mm"))
-        self.label_dueDate.setText(_translate("Dialog", "DueDate:"))
+        self.label_dueDate.setText(_translate("Dialog", "Due Date:"))
         self.label_cutOff.setText(_translate("Dialog", "Cutoff Date:"))
         self.dateTime_cutoffDate.setDisplayFormat(_translate("Dialog", "yyyy-MM-dd HH:mm"))
         self.label_penalty.setText(_translate("Dialog", "Penalty Per Day:"))

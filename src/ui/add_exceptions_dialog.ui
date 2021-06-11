@@ -94,7 +94,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>DueDate:</string>
+     <string>Due Date:</string>
     </property>
    </widget>
    <widget class="QLabel" name="label_cutOff">

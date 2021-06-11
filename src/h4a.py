@@ -170,9 +170,11 @@ class AccessRightsDialog(QDialog, Ui_Dialog_Access_Rights):
         path = ROOTDIR + "/access_rights.txt"
 
         lines = []
-        with open(path, 'r') as f:
-            for ln in f:
-                lines.append(ln.strip())
+
+        if os.path.isfile(path):
+            with open(path, 'r') as f:
+                for ln in f:
+                    lines.append(ln.strip())
 
         return lines
 
