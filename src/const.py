@@ -5,6 +5,8 @@ from datetime import datetime
 import yaml
 from pathlib import Path
 
+import const
+
 HANDINHOME = os.getcwd()
 
 if "src" in HANDINHOME:
@@ -34,6 +36,9 @@ FILE_SERVER_PORT = data['file_server_port']
 FILE_ADDR = (FILE_SERVER_HOST, FILE_SERVER_PORT)
 FILE_LOG_LEVEL = data['file_server_log_level']
 FILE_HTML_LANDING = data['file_html_landing']
+
+if not FILE_HTML_LANDING.startswith("/"):
+    FILE_HTML_LANDING = const.HANDINHOME + "/" + FILE_HTML_LANDING
 
 ARCHIVE_NUM = data['archive_num']
 PROGRAM_EXECUTION_TIMEOUT = data['program_execution_timeout']

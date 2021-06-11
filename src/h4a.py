@@ -81,6 +81,11 @@ class CreateNewModuleDialog(QDialog, Ui_Dialog_Create_New_Module):
         moduleDir = os.path.join(ROOTDIR[ROOTDIR.index(".handin"):], module_code, ay)
         self.create_files(moduleDir)
         linkDir = os.path.join(ROOTDIR, module_code, "curr")
+        if linkDir.endswith("/"):
+            linkDir = linkDir[0:len(linkDir)-1]
+
+        if os.path.exists(linkDir):
+            os.unlink(linkDir)
         os.symlink(ay, linkDir, True)
 
         create_message_box(f"Module {module_code} on academic year {ay} created successfully!")
@@ -110,14 +115,28 @@ class CreateUserDialog(QDialog, Ui_Dialog_Create_User):
                 error_dialog.showMessage("Failed to create user directory, please try again. Message: " + err)
                 error_dialog.exec()
 
+    def _get_users(self):
+        users = {}
+        path = ROOTDIR + "/login_credentials.txt"
+        with open(path, 'r') as f:
+            for line in f:
+                line = line.strip().split()
+                users[line[0]] = line[1]
+
+        return users
+
     def create_user(self):
+        users = self._get_users()
         user = self.lineEdit_username.text().strip()
         password = self.lineEdit_password.text().strip()
         hashed_password = encrypt_password(password)
+
+        users[user] = hashed_password
+
         path = ROOTDIR + "/login_credentials.txt"
-        with open(path, 'a') as f:
-            line = user + " " + hashed_password + "\n"
-            f.write(line)
+        with open(path, 'w+') as f:
+            for key, val in users.items():
+                f.write(key + " " + hashed_password + "\n")
             self.create_user_folder(user)
 
         create_message_box(f"Lecturer {user} created successfully!")
