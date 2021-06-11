@@ -28,6 +28,12 @@ from password_security import check_encrypted_password
 """
 
 logfile = os.path.join(const.ROOTDIR, "handin_file_server.log")
+
+logfile_dir = os.path.dirname(logfile)
+
+if not os.path.isdir(logfile_dir):
+    os.makedirs(logfile_dir)
+
 logging.basicConfig(filename=logfile, level=const.FILE_LOG_LEVEL, format='%(levelname)s: %(asctime)s %(message)s')
 
 s = None
@@ -149,7 +155,7 @@ def get_lecturer_auth_details(request: Request, request_name, error_response_on_
     return lecturer, password
 
 
-""" lecturer and password needs to be passed in with every request that involves lecturers so they'll
+""" lecturer and password needs to be passed in with every request that involves lecturers/other users so they'll
 be the only ones able to access the files
 
     If checkCredentials is True, an error response is sent if lecturer or password is empty, else it
@@ -163,17 +169,22 @@ def authenticate_lecturer(request: Request, request_name, checkCredentials = Tru
         password = lecturer_details[1]
         if lecturer is not None and password is not None:
             filepath = ROOTDIR + "/login_credentials.txt"
-            logging.debug(f"Reading file {filepath}")
-            with open(filepath, 'r') as f:
-                for ln in f:
-                    if ln.startswith(lecturer):
-                        data = ln.split()
-                        if check_encrypted_password(password, data[1]):
-                            logging.debug(f"Lecturer {lecturer} authenticated")
-                            return True
-                        else:
-                            logging.debug(f"Lecturer {lecturer} not authenticated")
-                            return False
+
+            if os.path.isfile(filepath):
+                logging.debug(f"Reading file {filepath}")
+                with open(filepath, 'r') as f:
+                    for ln in f:
+                        if ln.startswith(lecturer):
+                            data = ln.split()
+                            if check_encrypted_password(password, data[1]):
+                                logging.debug(f"Lecturer {lecturer} authenticated")
+                                return True
+                            else:
+                                logging.debug(f"Lecturer {lecturer} not authenticated")
+                                return False
+            else:
+                logging.debug(f"No lecturers have been created yet")
+                return False
 
     return False
 

@@ -18,12 +18,14 @@ class GetLecturerModules(AbstractCommand):
             filepath = ROOTDIR + "/access_rights.txt"
             logging.debug(f"Reading file {filepath}")
             modules = []
-            with open(filepath, 'r') as f:
-                for ln in f:
-                    if ln.startswith(lecturer):
-                        data = ln.split()
-                        for module in data[1:]:
-                            modules.append(module)
+
+            if os.path.isfile(filepath):
+                with open(filepath, 'r') as f:
+                    for ln in f:
+                        if ln.startswith(lecturer):
+                            data = ln.split()
+                            for module in data[1:]:
+                                modules.append(module)
 
             response_data = {
                 'modules': modules

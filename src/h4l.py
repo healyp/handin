@@ -118,7 +118,7 @@ class PickModuleDialog(QDialog, Ui_Dialog_pick_module):
             self.comboBox_modules.addItems(modules)
             if len(modules) == 0:
                 self.pushButton.setEnabled(False)
-                self.label_alert.setGeometry(50, 20, 400, 30)
+                self.label_alert.setGeometry(50, 20, 420, 30)
                 self.label_alert.setText("You have no modules. Contact handin admin to add a module.")
             self.pushButton.clicked.connect(lambda: self.main_dialog())
         else:
